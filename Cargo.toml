@@ -1,0 +1,6 @@
+[package]
+name = "GBEmu"
+version = "0.1.0"
+authors = ["Nate Jones <jonesnl@umich.edu>"]
+
+[dependencies]

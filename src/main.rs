@@ -8,8 +8,6 @@ use game_data::Cartridge;
 use std::path::Path;
 use std::io::prelude::*;
 use std::fs::File;
-use std::error::Error;
-
 
 fn main() {
     if std::env::args().len() != 2 {
@@ -34,6 +32,9 @@ fn main() {
     }
 
     let new_cartridge: Box<Cartridge> = MBC1::new(rom);
-        
-    // In order to use boxes, need to make a GameData trait instead
+
+    for x in 0x100..0x130 {
+        if (x % 0x10) == 0 {println!("");}
+        print!("{:0>2x} ", new_cartridge.read8(x));
+    }
 }

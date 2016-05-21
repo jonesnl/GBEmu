@@ -25,7 +25,7 @@ impl MBC1 {
 
         Box::new(MBC1 {
             rom: rom,
-            rom_bank_num: 0,
+            rom_bank_num: 1,
             ram: ram_vec,
             ram_enable: false,
             ram_bank_num: 0,
@@ -35,8 +35,7 @@ impl MBC1 {
 }
 
 impl Cartridge for MBC1 {
-    // TODO actual cartridge mapping
-    fn write8(&mut self, addr: BusType, mut data: u8) {
+    fn write8(&mut self, addr: BusType, data: u8) {
         match addr {
             0x0...0x1FFF => {
                 if data & 0xF == 0xA {
@@ -47,9 +46,10 @@ impl Cartridge for MBC1 {
             },
             0x2000...0x3FFF => {
                 if data == 0x0 {
-                    data = 0x1;
+                    self.rom_bank_num = 0x1;
+                } else {
+                    self.rom_bank_num = data;
                 }
-                self.rom_bank_num = data;
             },
             0x4000...0x5FFF => {
                 self.ram_bank_num = data;
@@ -71,6 +71,35 @@ impl Cartridge for MBC1 {
     }
 
     fn read8(&self, addr: BusType) -> u8 {
-        self.rom[addr as usize]
+        match addr {
+            0x0...0x3FFF => {
+                self.rom[addr as usize]
+            },
+            0x4000...0x7FFF => {
+                let bank_num = match self.mode_select {
+                    0 => ((self.ram_bank_num as u16) << 5) | (self.rom_bank_num as u16),
+                    _ => self.rom_bank_num as u16,
+                };
+                self.rom[((addr-0x4000) + 0x4000 * bank_num) as usize]
+            },
+            0xA000...0xBFFF => {
+                self.ram[((addr-0xA000) + 0x2000 * self.ram_bank_num as u16) as usize]
+            },
+            _ => panic!("Illegal read from {}", addr),
+        }
+    }
+}
+
+#[test]
+fn mbc1_rom_bank_test() {
+    let mut rom_vec = Vec::<u8>::new();
+    rom_vec.resize(1024 * 64, 0x0);
+    for i in 0..4 {
+        rom_vec[i << 14] = i as u8;
+    }
+    let mut mbc1 = MBC1::new(rom_vec);
+    for i in 1..4 {
+        mbc1.write8(0x2000, i);
+        assert!(mbc1.read8(0x4000) == i);
     }
 }

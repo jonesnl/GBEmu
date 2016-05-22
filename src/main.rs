@@ -3,7 +3,7 @@ mod hw;
 
 use std::env;
 use hw::controller::MBC1;
-use game_data::Cartridge;
+use game_data::Bus;
 
 use std::path::Path;
 use std::io::prelude::*;
@@ -31,7 +31,7 @@ fn main() {
         }
     }
 
-    let new_cartridge: Box<Cartridge> = MBC1::new(rom);
+    let new_cartridge: Box<Bus> = MBC1::new(rom);
 
     for x in 0x100..0x130 {
         if (x % 0x10) == 0 {println!("");}

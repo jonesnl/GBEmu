@@ -1,4 +1,4 @@
-use game_data::{BusType, Cartridge};
+use game_data::{BusWidth, Bus};
 
 pub struct MBC1 {
     rom: Vec<u8>,
@@ -11,7 +11,7 @@ pub struct MBC1 {
 }
 
 impl MBC1 {
-    pub fn new(rom: Vec<u8>) -> Box<Cartridge> {
+    pub fn new(rom: Vec<u8>) -> Box<Bus> {
         let ramsize = match rom[0x149] {
             0x0 => 0,
             0x1 => 2048,
@@ -20,8 +20,7 @@ impl MBC1 {
             _ => panic!("invalid ram size!"),
         };
 
-        let mut ram_vec = Vec::new();
-        ram_vec.resize(ramsize, 0);
+        let mut ram_vec = vec![0u8; ramsize];
 
         Box::new(MBC1 {
             rom: rom,
@@ -34,8 +33,8 @@ impl MBC1 {
     }
 }
 
-impl Cartridge for MBC1 {
-    fn write8(&mut self, addr: BusType, data: u8) {
+impl Bus for MBC1 {
+    fn write8(&mut self, addr: BusWidth, data: u8) {
         match addr {
             0x0...0x1FFF => {
                 if data & 0xF == 0xA {
@@ -70,7 +69,7 @@ impl Cartridge for MBC1 {
         };
     }
 
-    fn read8(&self, addr: BusType) -> u8 {
+    fn read8(&self, addr: BusWidth) -> u8 {
         match addr {
             0x0...0x3FFF => {
                 self.rom[addr as usize]
@@ -92,8 +91,7 @@ impl Cartridge for MBC1 {
 
 #[test]
 fn mbc1_rom_bank_test() {
-    let mut rom_vec = Vec::<u8>::new();
-    rom_vec.resize(1024 * 64, 0x0);
+    let mut rom_vec = vec![0u8; 1024 * 64];
     for i in 0..4 {
         rom_vec[i << 14] = i as u8;
     }

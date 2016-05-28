@@ -1,9 +1,12 @@
 mod game_data;
 mod hw;
+mod cpu;
 
 use std::env;
 use hw::controller::MBC1;
-use game_data::Bus;
+use hw::memory::Bus;
+use hw::memory::Memory;
+use game_data::GameData;
 
 use std::path::Path;
 use std::io::prelude::*;
@@ -32,9 +35,11 @@ fn main() {
     }
 
     let new_cartridge: Box<Bus> = MBC1::new(rom);
+    let new_memory = Memory::new(new_cartridge);
+    let game_data = GameData::new(new_memory);
 
     for x in 0x100..0x130 {
         if (x % 0x10) == 0 {println!("");}
-        print!("{:0>2x} ", new_cartridge.read8(x));
+        print!("{:0>2x} ", game_data.memory.read8(x));
     }
 }

@@ -1,4 +1,4 @@
-use game_data::{BusWidth, Bus};
+use hw::memory::{BusWidth, Bus};
 
 pub struct MBC1 {
     rom: Vec<u8>,

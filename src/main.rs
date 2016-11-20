@@ -1,6 +1,6 @@
 mod game_data;
 mod hw;
-mod cpu;
+pub mod cpu;
 
 use std::env;
 use hw::controller::MBC1;

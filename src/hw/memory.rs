@@ -5,12 +5,16 @@ pub trait Bus {
 
     fn read8(&self, addr: BusWidth) -> u8;
     
-    fn write16(&mut self, addr: BusWidth, data: u16) {
+    fn write16(&mut self, addr: BusWidth, data: u16);
+
+    fn read16(&self, addr: BusWidth) -> u16;
+
+    fn _write16_using_write8(&mut self, addr: BusWidth, data: u16) {
         self.write8(addr+1, (data >> 8) as u8);
         self.write8(addr, (data & 0xFF) as u8);
     }
 
-    fn read16(&self, addr: BusWidth) -> u16 {
+    fn _read16_using_read8(&self, addr: BusWidth) -> u16 {
         let lower_byte = self.read8(addr) as u16;
         let upper_byte = self.read8(addr + 1) as u16;
         (upper_byte << 8) & lower_byte
@@ -62,13 +66,13 @@ impl Bus for Memory {
                 panic!("Unusable memory address {}", addr);
             },
             0xFF00...0xFF7F => {
-                // I/O
+                // TODO I/O
             },
             0xFF80...0xFFFE => {
                 self.hram[(addr-0xFF80) as usize] = data;
             },
             0xFFFF => {
-                // Interrupt enable register
+                // TODO Interrupt enable register
             },
             _ => {
                 panic!("Illegal write to {}", addr);
@@ -100,19 +104,27 @@ impl Bus for Memory {
                 panic!("Unusable memory address {}", addr);
             },
             0xFF00...0xFF7F => {
-                // I/O
+                // TODO I/O
                 0
             },
             0xFF80...0xFFFE => {
                 self.hram[(addr-0xFF80) as usize]
             },
             0xFFFF => {
-                // Interrupt enable register
+                // TODO Interrupt enable register
                 0
             },
             _ => {
                 panic!("Illegal write to {}", addr);
             }
         }
+    }
+
+    fn write16(&mut self, addr: BusWidth, data: u16) {
+        self._write16_using_write8(addr, data);
+    }
+
+    fn read16(&self, addr: BusWidth) -> u16 {
+        self._read16_using_read8(addr)
     }
 }

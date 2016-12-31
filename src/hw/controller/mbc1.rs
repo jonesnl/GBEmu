@@ -20,7 +20,7 @@ impl MBC1 {
             _ => panic!("invalid ram size!"),
         };
 
-        let mut ram_vec = vec![0u8; ramsize];
+        let ram_vec = vec![0u8; ramsize];
 
         Box::new(MBC1 {
             rom: rom,
@@ -86,6 +86,14 @@ impl Bus for MBC1 {
             },
             _ => panic!("Illegal read from {}", addr),
         }
+    }
+
+    fn write16(&mut self, addr: BusWidth, data: u16) {
+        self._write16_using_write8(addr, data);
+    }
+
+    fn read16(&self, addr: BusWidth) -> u16 {
+        self._read16_using_read8(addr)
     }
 }
 

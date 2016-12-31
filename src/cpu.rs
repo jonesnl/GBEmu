@@ -1,120 +1,653 @@
 #![allow(dead_code)]
 
+use registers::Registers;
+use hw::memory::{Bus, BusWidth, Memory};
+
+const INSTR_ARRAY_SIZE: usize = 256;
+
 pub struct Cpu {
-    af: u16,
-    bc: u16,
-    de: u16,
-    hl: u16,
-    sp: u16,
-    pc: u16,
+    regs: Registers,
+    memory: Memory,
 }
 
-enum WhichByte {
-    Upper,
-    Lower,
-}
-
-macro_rules! _reg_get {
-    ($name:ident, $reg:ident) => {
-        pub fn $name(&self) -> u16 {
-            self.$reg
-        }
-    };
-
-    ($name:ident, $reg:ident, $which_byte:path) => {
-        pub fn $name(&self) -> u8 {
-            match $which_byte {
-                WhichByte::Upper => (self.$reg>>8) as u8,
-                WhichByte::Lower => self.$reg as u8,
-            }
-        }
-    };
-}
-
-macro_rules! _reg_put {
-    ($name:ident, $reg:ident) => {
-        pub fn $name(&mut self, val: u16) {
-            self.$reg = val;
-        }
-    };
-
-    ($name:ident, $reg:ident, $which_byte:path) => {
-        pub fn $name(&mut self, val: u8) {
-            match $which_byte {
-                WhichByte::Upper => {
-                    self.$reg = (self.$reg & 0xff) | ((val as u16)<<8);
-                },
-                WhichByte::Lower => {
-                    self.$reg = (self.$reg & 0xff00) | (val as u16);
-                },
-            }
-        }
-    };
-}
-
-use self::WhichByte::*;
 impl Cpu {
-    pub fn new() -> Cpu {
+    pub fn new(memory: Memory) -> Cpu {
         Cpu {
-            af: 0,
-            bc: 0,
-            de: 0,
-            hl: 0,
-            sp: 0,
-            pc: 0,
+            regs: Registers::new(),
+            memory: memory,
         }
     }
 
-    // First byte functions
-    _reg_get!(get_a, af, Upper);
-    _reg_get!(get_f, af, Lower);
-    _reg_get!(get_b, bc, Upper);
-    _reg_get!(get_c, bc, Lower);
-    _reg_get!(get_d, de, Upper);
-    _reg_get!(get_e, de, Lower);
-    _reg_get!(get_h, hl, Upper);
-    _reg_get!(get_l, hl, Lower);
+    pub fn get_opcode(&self) -> u8 {
+        let pc = self.regs.get_pc();
+        self.read8(pc)
+    }
 
-    _reg_put!(put_a, af, Upper);
-    _reg_put!(put_f, af, Lower);
-    _reg_put!(put_b, bc, Upper);
-    _reg_put!(put_c, bc, Lower);
-    _reg_put!(put_d, de, Upper);
-    _reg_put!(put_e, de, Lower);
-    _reg_put!(put_h, hl, Upper);
-    _reg_put!(put_l, hl, Lower);
+    pub fn incr_pc(&mut self) {
+        let pc = self.regs.get_pc();
+        self.regs.put_pc(pc+1);
+    }
 
-    // Now two byte functions
-    _reg_get!(get_af, af);
-    _reg_get!(get_bc, bc);
-    _reg_get!(get_de, de);
-    _reg_get!(get_hl, hl);
-    _reg_get!(get_sp, sp);
-    _reg_get!(get_pc, pc);
+}
 
-    _reg_put!(put_af, af);
-    _reg_put!(put_bc, bc);
-    _reg_put!(put_de, de);
-    _reg_put!(put_hl, hl);
-    _reg_put!(put_sp, sp);
-    _reg_put!(put_pc, pc);
+impl Bus for Cpu {
+    fn write8(&mut self, addr: BusWidth, data: u8) {
+        self.memory.write8(addr, data);
+    }
+
+    fn read8(&self, addr: BusWidth) -> u8 {
+        self.memory.read8(addr)
+    }
+
+    fn write16(&mut self, addr: BusWidth, data: u16) {
+        self.memory.write16(addr, data);
+    }
+
+    fn read16(&self, addr: BusWidth) -> u16 {
+        self.memory.read16(addr)
+    }
+}
+
+pub fn execute_instruction(cpu: &mut Cpu) -> Result<(), ()> {
+    // Get instruction (XXX expand)
+    // Look up instruction in instruction table
+    // Execute instruction
+    let result = INSTR[cpu.get_opcode() as usize](cpu);
+    // wait
+    cpu.incr_pc();
+    result
+}
+
+fn noop_instr(_: &mut Cpu) -> Result<(), ()> {
+    Ok(())
+}
+
+fn stop_instr(_: &mut Cpu) -> Result<(), ()> {
+    Err(())
+}
+
+fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let a = cpu.regs.get_a();
+    let arg_val = match opcode & 0xF {
+        0 => cpu.regs.get_b(),
+        1 => cpu.regs.get_c(),
+        2 => cpu.regs.get_d(),
+        3 => cpu.regs.get_e(),
+        4 => cpu.regs.get_h(),
+        6 => cpu.regs.get_l(),
+        7 => cpu.regs.get_a(),
+        _ => panic!("Unrecognized register!"),
+    };
+    let new_val = arg_val + a;
+    // TODO set flags
+    cpu.regs.put_a(new_val);
+    Ok(())
+}
+
+fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    // Get next instruction
+    cpu.incr_pc();
+    let result = CB_INSTR[cpu.get_opcode() as usize](cpu);
+    result
+}
+
+static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
+        [noop_instr, // 0x00
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        stop_instr, // 0x10
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x20
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x30
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x40
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x50
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x60
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x70
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        add_instr, // 0x80
+        add_instr,
+        add_instr,
+        add_instr,
+        add_instr,
+        add_instr,
+        add_instr,
+        add_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x90
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xa0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xb0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xc0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        cb_instr, // 0xcb
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xd0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xe0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xf0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        ];
+
+static CB_INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
+        [noop_instr, // 0x00
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x10
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x20
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x30
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x40
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x50
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x60
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x70
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x80
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0x90
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xa0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xb0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xc0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xd0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xe0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr, // 0xf0
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        noop_instr,
+        ];
+
+#[test]
+fn five_noops() {
+    use hw::controller::MBC1;
+    let mut rom = vec![0x00; 0xFFFF];
+    rom[0] = 0x00u8;
+    rom[1] = 0x00;
+    rom[2] = 0x00;
+    rom[3] = 0x00;
+    rom[4] = 0x00;
+    rom[5] = 0x10;
+
+    let new_cartridge: Box<Bus> = MBC1::new(rom);
+    let new_memory = Memory::new(new_cartridge);
+    let mut cpu = Cpu::new(new_memory);
+    loop {
+        if execute_instruction(&mut cpu).is_err() {
+            break;
+        }
+    }
+    assert_eq!(cpu.regs.get_pc(), 6);
 }
 
 #[test]
-fn basic_reg_test() {
-    let mut cpu = Cpu::new();
-    cpu.put_a(0x1);
-    assert_eq!(cpu.get_a(), 0x1);
-    assert_eq!(cpu.get_f(), 0x00);
-    cpu.put_af(0x1112);
-    assert_eq!(cpu.get_a(), 0x11);
-    assert_eq!(cpu.get_f(), 0x12);
+fn add() {
+    use hw::controller::MBC1;
+    let mut rom = vec![0x00; 0xFFFF];
+    rom[0] = 0x00u8;
+    rom[1] = 0x87;
+    rom[2] = 0x10;
 
-    cpu.put_a(0x20);
-    assert_eq!(cpu.get_a(), 0x20);
-    assert_eq!(cpu.get_f(), 0x12);
-
-    cpu.put_f(0x30);
-    assert_eq!(cpu.get_a(), 0x20);
-    assert_eq!(cpu.get_f(), 0x30);
+    let new_cartridge: Box<Bus> = MBC1::new(rom);
+    let new_memory = Memory::new(new_cartridge);
+    let mut cpu = Cpu::new(new_memory);
+    cpu.regs.put_a(1);
+    loop {
+        if execute_instruction(&mut cpu).is_err() {
+            break;
+        }
+    }
+    assert_eq!(cpu.regs.get_a(), 2);
 }

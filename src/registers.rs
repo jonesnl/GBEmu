@@ -75,6 +75,22 @@ impl Registers {
     _reg_get!(get_h, hl, Upper);
     _reg_get!(get_l, hl, Lower);
 
+    pub fn get_flag_z(&self) -> bool {
+        (self.get_f() >> 7) == 1
+    }
+
+    pub fn get_flag_n(&self) -> bool {
+        (self.get_f() >> 6) == 1
+    }
+
+    pub fn get_flag_h(&self) -> bool {
+        (self.get_f() >> 5) == 1
+    }
+
+    pub fn get_flag_c(&self) -> bool {
+        (self.get_f() >> 4) == 1
+    }
+
     _reg_put!(put_a, af, Upper);
     _reg_put!(put_f, af, Lower);
     _reg_put!(put_b, bc, Upper);
@@ -83,6 +99,38 @@ impl Registers {
     _reg_put!(put_e, de, Lower);
     _reg_put!(put_h, hl, Upper);
     _reg_put!(put_l, hl, Lower);
+
+    pub fn put_flag_z(&mut self, val: bool) {
+        let flags = self.get_f();
+        let cleared_flags = flags & 0b0111_1111;
+        assert_eq!(0x1 & (cleared_flags >> 7), 0);
+        let set_flags = flags | ((val as u8) << 7);
+        self.put_f(set_flags);
+    }
+
+    pub fn put_flag_n(&mut self, val: bool) {
+        let flags = self.get_f();
+        let cleared_flags = flags & 0b1011_1111;
+        assert_eq!(0x1 & (cleared_flags >> 6), 0);
+        let set_flags = flags | ((val as u8) << 6);
+        self.put_f(set_flags);
+    }
+
+    pub fn put_flag_h(&mut self, val: bool) {
+        let flags = self.get_f();
+        let cleared_flags = flags & 0b1101_1111;
+        assert_eq!(0x1 & (cleared_flags >> 5), 0);
+        let set_flags = flags | ((val as u8) << 5);
+        self.put_f(set_flags);
+    }
+
+    pub fn put_flag_c(&mut self, val: bool) {
+        let flags = self.get_f();
+        let cleared_flags = flags & 0b1110_1111;
+        assert_eq!(0x1 & (cleared_flags >> 4), 0);
+        let set_flags = flags | ((val as u8) << 4);
+        self.put_f(set_flags);
+    }
 
     // Now two byte functions
     _reg_get!(get_af, af);
@@ -98,6 +146,7 @@ impl Registers {
     _reg_put!(put_hl, hl);
     _reg_put!(put_sp, sp);
     _reg_put!(put_pc, pc);
+
 }
 
 #[test]

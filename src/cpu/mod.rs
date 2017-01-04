@@ -79,7 +79,8 @@ fn type_a_reg_val(cpu: &Cpu, opcode: &u8) -> u8 {
         2 => cpu.regs.get_d(),
         3 => cpu.regs.get_e(),
         4 => cpu.regs.get_h(),
-        6 => cpu.regs.get_l(),
+        5 => cpu.regs.get_l(),
+        6 => cpu.read8(cpu.regs.get_hl()),
         7 => cpu.regs.get_a(),
         _ => panic!("Unrecognized register!"),
     }
@@ -160,7 +161,7 @@ fn five_noops() {
 #[test]
 fn add() {
     let mut cpu = setup_test![
-        0x00, 0x87
+        0x87
     ];
     cpu.regs.put_a(1);
 

@@ -118,6 +118,27 @@ pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn ld_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    cpu.incr_pc();
+    let imm_val = cpu.get_opcode();
+    match opcode {
+        0x06 => cpu.regs.put_b(imm_val),
+        0x0e => cpu.regs.put_c(imm_val),
+        0x16 => cpu.regs.put_d(imm_val),
+        0x1e => cpu.regs.put_e(imm_val),
+        0x26 => cpu.regs.put_h(imm_val),
+        0x2e => cpu.regs.put_l(imm_val),
+        0x36 => {
+            let reg_hl = cpu.regs.get_hl();
+            cpu.write8(reg_hl, imm_val);
+        },
+        0x3e => cpu.regs.put_a(imm_val),
+        ____ => panic!("Unrecognized ld_imm opcode {}", opcode),
+    };
+    Ok(())
+}
+
 pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
     // Get next instruction
     cpu.incr_pc();
@@ -185,4 +206,18 @@ fn sub() {
         }
     }
     assert_eq!(cpu.regs.get_a(), 0);
+}
+
+#[test]
+fn ld_imm() {
+    let mut cpu = setup_test![
+        0x3e, 0x10, 0x06, 0x20
+    ];
+    loop {
+        if execute_instruction(&mut cpu).is_err() {
+            break;
+        }
+    }
+    assert_eq!(cpu.regs.get_a(), 0x10);
+    assert_eq!(cpu.regs.get_b(), 0x20);
 }

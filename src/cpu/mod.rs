@@ -139,6 +139,26 @@ pub fn ld_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let from_val = type_a_reg_val(cpu, &opcode);
+    match (opcode>>3) & 0x7 {
+        0 => cpu.regs.put_b(from_val),
+        1 => cpu.regs.put_c(from_val),
+        2 => cpu.regs.put_d(from_val),
+        3 => cpu.regs.put_e(from_val),
+        4 => cpu.regs.put_h(from_val),
+        5 => cpu.regs.put_l(from_val),
+        6 => {
+            let reg_hl = cpu.regs.get_hl();
+            cpu.write8(reg_hl, from_val);
+        },
+        7 => cpu.regs.put_a(from_val),
+        _ => panic!("Unrecognized ld opcode {}", opcode),
+    }
+    Ok(())
+}
+
 pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
     // Get next instruction
     cpu.incr_pc();
@@ -220,4 +240,20 @@ fn ld_imm() {
     }
     assert_eq!(cpu.regs.get_a(), 0x10);
     assert_eq!(cpu.regs.get_b(), 0x20);
+}
+
+#[test]
+fn ld() {
+    let mut cpu = setup_test![
+        0x3e, 0xff, 0x47, 0x48
+    ];
+    loop {
+        if execute_instruction(&mut cpu).is_err() {
+            break;
+        }
+    }
+    assert_eq!(cpu.regs.get_a(), 0xff);
+    assert_eq!(cpu.regs.get_b(), 0xff);
+    assert_eq!(cpu.regs.get_c(), 0xff);
+    assert_eq!(cpu.regs.get_d(), 0x00);
 }

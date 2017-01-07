@@ -163,6 +163,18 @@ pub fn or_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let a_val = cpu.regs.get_a() as u16;
+    let new_val = a_val - arg_val;
+
+    set_result_flags(cpu, new_val);
+    cpu.regs.put_flag_n(true);
+
+    Ok(())
+}
+
 pub fn ld_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
     cpu.incr_pc();

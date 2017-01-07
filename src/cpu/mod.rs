@@ -118,6 +118,51 @@ pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn and_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let arg_val = type_a_reg_val(&cpu, &opcode);
+    let a_val = cpu.regs.get_a();
+    let new_val = a_val & arg_val;
+    
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(true);
+    cpu.regs.put_flag_c(false);
+    
+    cpu.regs.put_a(new_val);
+    Ok(())
+}
+
+pub fn xor_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let arg_val = type_a_reg_val(&cpu, &opcode);
+    let a_val = cpu.regs.get_a();
+    let new_val = a_val ^ arg_val;
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(false);
+
+    cpu.regs.put_a(new_val);
+    Ok(())
+}
+
+pub fn or_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let arg_val = type_a_reg_val(&cpu, &opcode);
+    let a_val = cpu.regs.get_a();
+    let new_val = a_val | arg_val;
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(false);
+
+    cpu.regs.put_a(new_val);
+    Ok(())
+}
+
 pub fn ld_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
     cpu.incr_pc();

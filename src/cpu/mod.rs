@@ -250,6 +250,34 @@ pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+/*********** Control Flow *************/
+
+pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    
+    let should_jump = match opcode {
+        0xc3 => true,
+        0xc2 => !cpu.regs.get_flag_z(),
+        0xca => cpu.regs.get_flag_z(),
+        0xd2 => !cpu.regs.get_flag_c(),
+        0xda => cpu.regs.get_flag_c(),
+        ____ => panic!("Unrecognized jp opcode {}", opcode),
+    };
+    
+    cpu.incr_pc();
+    let lower_imm_val = cpu.get_opcode() as u16;
+    cpu.incr_pc();
+    let upper_imm_val = cpu.get_opcode() as u16;
+    
+    if !should_jump {
+        return Ok(());
+    }
+
+    let imm_val = (upper_imm_val<<8) | lower_imm_val;
+    cpu.regs.put_pc(imm_val);
+    Ok(())
+}
+
 pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
     // Get next instruction
     cpu.incr_pc();

@@ -105,11 +105,45 @@ pub fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn adc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let a_val = cpu.regs.get_a() as u16;
+    let carry_val = match cpu.regs.get_flag_c() {
+        true => 1,
+        false => 0,
+    };
+    let new_val = a_val + arg_val + carry_val;
+
+    set_result_flags(cpu, new_val);
+    cpu.regs.put_flag_n(false);
+
+    cpu.regs.put_a(new_val as u8);
+    Ok(())
+}
+
 pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
     let a_val = cpu.regs.get_a() as u16;
     let new_val = a_val - arg_val;
+
+    set_result_flags(cpu, new_val);
+    cpu.regs.put_flag_n(true);
+
+    cpu.regs.put_a(new_val as u8);
+    Ok(())
+}
+
+pub fn sbc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let a_val = cpu.regs.get_a() as u16;
+    let carry_val = match cpu.regs.get_flag_c() {
+        true => 1,
+        false => 0,
+    };
+    let new_val = a_val - (arg_val + carry_val);
 
     set_result_flags(cpu, new_val);
     cpu.regs.put_flag_n(true);

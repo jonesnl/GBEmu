@@ -209,7 +209,7 @@ pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
-pub fn ld_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
     cpu.incr_pc();
     let imm_val = cpu.get_opcode();
@@ -225,7 +225,26 @@ pub fn ld_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
             cpu.write8(reg_hl, imm_val);
         },
         0x3e => cpu.regs.put_a(imm_val),
-        ____ => panic!("Unrecognized ld_imm opcode {}", opcode),
+        ____ => panic!("Unrecognized ld_u8_imm opcode {}", opcode),
+    };
+    Ok(())
+}
+
+pub fn ld_u16_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    cpu.incr_pc();
+    let lower_imm_val = cpu.get_opcode() as u16;
+    cpu.incr_pc();
+    let upper_imm_val = cpu.get_opcode() as u16;
+    let imm_val = (upper_imm_val<<8) | lower_imm_val;
+
+    match opcode {
+        0x01 => cpu.regs.put_bc(imm_val),
+        0x11 => cpu.regs.put_de(imm_val),
+        0x21 => cpu.regs.put_hl(imm_val),
+        0x31 => cpu.regs.put_sp(imm_val),
+        ____ => panic!("Unrecognized ld_u16_imm opcode {}", opcode),
     };
     Ok(())
 }

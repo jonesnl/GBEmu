@@ -250,6 +250,50 @@ pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn ld_from_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let from_addr = match opcode {
+        0x0A => cpu.regs.get_bc(),
+        0x1A => cpu.regs.get_de(),
+        0x2A => {
+            let val = cpu.regs.get_hl();
+            cpu.regs.put_hl(val + 1);
+            val
+        },
+        0x3A => {
+            let val = cpu.regs.get_hl();
+            cpu.regs.put_hl(val - 1);
+            val
+        },
+        ____ => panic!("Unrecognized ld_from_mem opcode {}", opcode),
+    };
+    let from_val = cpu.read8(from_addr);
+    cpu.regs.put_a(from_val);
+    Ok(())
+}
+
+pub fn ld_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let to_addr = match opcode {
+        0x02 => cpu.regs.get_bc(),
+        0x12 => cpu.regs.get_de(),
+        0x22 => {
+            let val = cpu.regs.get_hl();
+            cpu.regs.put_hl(val + 1);
+            val
+        },
+        0x32 => {
+            let val = cpu.regs.get_hl();
+            cpu.regs.put_hl(val - 1);
+            val
+        },
+        ____ => panic!("Unrecognized ld_to_mem opcode {}", opcode),
+    };
+    let a_val = cpu.regs.get_a();
+    cpu.write8(to_addr, a_val);
+    Ok(())
+}
+
 /*********** Control Flow *************/
 
 pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {

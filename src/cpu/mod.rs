@@ -362,6 +362,27 @@ pub fn ld_from_a_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn ld_hl_to_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let hl_val = cpu.regs.get_hl();
+    cpu.regs.put_sp(hl_val);
+    Ok(())
+}
+
+pub fn ld_sp_plus_signed_imm_to_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let sp_val = cpu.regs.get_sp();
+    cpu.incr_pc();
+    let signed_imm = cpu.get_opcode() as i8;
+    let sized_signed_imm = signed_imm as i16;
+    // XXX: There must be a better way to add signed and unsigned numbers while
+    // allowing wrapping. TODO also be sure to test this!!!
+    let new_sp_val = {
+        if signed_imm < 0 {sp_val.wrapping_sub((-sized_signed_imm) as u16)}
+        else {sp_val.wrapping_add(signed_imm as u16)}
+    };
+    cpu.regs.put_hl(new_sp_val);
+    Ok(())
+}
+
 /*********** Control Flow *************/
 
 pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {

@@ -313,6 +313,18 @@ pub fn ld_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn ld_sp_to_imm_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    cpu.incr_pc();
+    let to_addr_lower = cpu.get_opcode() as u16;
+    cpu.incr_pc();
+    let to_addr_upper = cpu.get_opcode() as u16;
+
+    let to_addr = (to_addr_upper<<8) | to_addr_lower;
+    let value = cpu.regs.get_sp();
+    cpu.write16(to_addr, value);
+    Ok(())
+}
+
 /*********** Control Flow *************/
 
 pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {

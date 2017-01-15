@@ -325,6 +325,43 @@ pub fn ld_sp_to_imm_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+fn ld_specialized_mem_addr(cpu: &mut Cpu, opcode: u8) -> u16 {
+    match opcode & 0x0f {
+        0x0 => {
+            cpu.incr_pc();
+            let imm_val = cpu.get_opcode() as u16;
+            0xff00 | imm_val
+        },
+        0x2 => 0xff00 | (cpu.regs.get_c() as u16),
+        0xa => {
+            cpu.incr_pc();
+            let addr_lower = cpu.get_opcode() as u16;
+            cpu.incr_pc();
+            let addr_upper = cpu.get_opcode() as u16;
+            (addr_upper<<8) | addr_lower
+        },
+        ____ => panic!("Unrecognized specialized_mem_addr opcode {}", opcode),
+    }
+}
+
+pub fn ld_from_mem_to_a_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let mem_addr = ld_specialized_mem_addr(cpu, opcode);
+    let mem_val = cpu.read8(mem_addr);
+    cpu.regs.put_a(mem_val);
+    Ok(())
+}
+
+pub fn ld_from_a_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let mem_addr = ld_specialized_mem_addr(cpu, opcode);
+    let a_val = cpu.regs.get_a();
+    cpu.write8(mem_addr, a_val);
+    Ok(())
+}
+
 /*********** Control Flow *************/
 
 pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {

@@ -95,6 +95,7 @@ fn type_a_reg_or_imm(cpu: &mut Cpu, opcode: u8, imm_opcode: u8) -> u8 {
     }
 }
 
+// XXX half carry logic is incorrect
 fn set_result_flags(cpu: &mut Cpu, new_val: u16) {
     cpu.regs.put_flag_z(new_val == 0);
     cpu.regs.put_flag_h((1 & (new_val >> 4)) == 1); 
@@ -217,6 +218,82 @@ pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
     Ok(())
 }
+
+/************* Misc. Arithmatic Instructions ************/
+
+fn inc_dec_get_val(cpu: &Cpu, opcode: u8) -> u8 {
+    // inc opcodes are even, whereas dec opcodes are odd and +1 from their
+    // inc counterparts. We can use a bitmask to make a single test for
+    // both opcodes
+    match opcode & 0xfe {
+        0x04 => cpu.regs.get_b(),
+        0x0c => cpu.regs.get_c(),
+        0x14 => cpu.regs.get_d(),
+        0x1c => cpu.regs.get_e(),
+        0x24 => cpu.regs.get_h(),
+        0x2c => cpu.regs.get_l(),
+        0x34 => {
+            let addr = cpu.regs.get_hl();
+            cpu.read8(addr)
+        },
+        0x3c => cpu.regs.get_a(),
+        ____ => panic!("Unrecognized inc/dec opcode {}", opcode),
+    }
+}
+
+fn inc_dec_put_val(cpu: &mut Cpu, opcode: u8, new_val: u8) {
+    // inc opcodes are even, whereas dec opcodes are odd and +1 from their
+    // inc counterparts. We can use a bitmask to make a single test for
+    // both opcodes
+    match opcode & 0xfe {
+        0x04 => cpu.regs.put_b(new_val),
+        0x0c => cpu.regs.put_c(new_val),
+        0x14 => cpu.regs.put_d(new_val),
+        0x1c => cpu.regs.put_e(new_val),
+        0x24 => cpu.regs.put_h(new_val),
+        0x2c => cpu.regs.put_l(new_val),
+        0x34 => {
+            let addr = cpu.regs.get_hl();
+            cpu.write8(addr, new_val);
+        },
+        0x3c => cpu.regs.put_a(new_val),
+        ____ => panic!("Unrecognized inc/dec opcode {}", opcode),
+    };
+}
+
+fn set_inc_dec_result_flags(cpu: &mut Cpu, old_val: u8, new_val: u8) {
+    cpu.regs.put_flag_z(new_val == 0);
+    // XXX Fix half carry computation
+    cpu.regs.put_flag_h((new_val>>4) & 1 == 1);
+}
+
+pub fn inc_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = inc_dec_get_val(cpu, opcode);
+    let new_val = old_val + 1;
+
+    set_inc_dec_result_flags(cpu, old_val, new_val);
+    cpu.regs.put_flag_n(false);
+
+    inc_dec_put_val(cpu, opcode, new_val);
+
+    Ok(())
+}
+
+pub fn dec_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = inc_dec_get_val(cpu, opcode);
+    let new_val = old_val - 1;
+
+    set_inc_dec_result_flags(cpu, old_val, new_val);
+    cpu.regs.put_flag_n(true);
+
+    inc_dec_put_val(cpu, opcode, new_val);
+
+    Ok(())
+}
+
+/************* Load instructions *****************/
 
 pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();

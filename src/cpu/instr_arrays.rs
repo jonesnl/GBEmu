@@ -201,7 +201,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         jp_instr,
         noop_instr,
         noop_instr,
-        noop_instr,
+        add_instr,
         noop_instr,
         noop_instr,
         noop_instr,
@@ -209,7 +209,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         cb_instr, // 0xcb
         noop_instr,
         noop_instr,
-        noop_instr,
+        adc_instr,
         noop_instr,
         noop_instr, // 0xd0
         noop_instr,
@@ -217,7 +217,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         noop_instr,
         noop_instr,
-        noop_instr,
+        sub_instr,
         noop_instr,
         noop_instr,
         noop_instr,
@@ -225,7 +225,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         noop_instr,
         undef_instr,
-        noop_instr,
+        sbc_instr,
         noop_instr,
         ld_from_a_to_mem_instr, // 0xe0
         noop_instr,
@@ -233,7 +233,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         undef_instr,
         noop_instr,
-        noop_instr,
+        and_instr,
         noop_instr,
         noop_instr,
         noop_instr,
@@ -241,7 +241,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         undef_instr,
         undef_instr,
-        noop_instr,
+        xor_instr,
         noop_instr,
         ld_from_mem_to_a_instr, // 0xf0
         noop_instr,
@@ -249,7 +249,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         noop_instr,
         undef_instr,
         noop_instr,
-        noop_instr,
+        or_instr,
         noop_instr,
         ld_sp_plus_signed_imm_to_hl_instr,
         ld_hl_to_sp_instr,
@@ -257,7 +257,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         noop_instr,
         undef_instr,
         undef_instr,
-        noop_instr,
+        cp_instr,
         noop_instr,
         ];
 

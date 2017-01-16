@@ -72,7 +72,7 @@ pub fn undef_instr(_: &mut Cpu) -> Result<(), ()> {
     Err(())
 }
 
-fn type_a_reg_val(cpu: &Cpu, opcode: &u8) -> u8 {
+fn type_a_reg_val(cpu: &Cpu, opcode: u8) -> u8 {
     match opcode & 0x7 {
         0 => cpu.regs.get_b(),
         1 => cpu.regs.get_c(),
@@ -86,6 +86,15 @@ fn type_a_reg_val(cpu: &Cpu, opcode: &u8) -> u8 {
     }
 }
 
+fn type_a_reg_or_imm(cpu: &mut Cpu, opcode: u8, imm_opcode: u8) -> u8 {
+    if imm_opcode == opcode {
+        cpu.incr_pc();
+        cpu.get_opcode()
+    } else {
+        type_a_reg_val(cpu, opcode)
+    }
+}
+
 fn set_result_flags(cpu: &mut Cpu, new_val: u16) {
     cpu.regs.put_flag_z(new_val == 0);
     cpu.regs.put_flag_h((1 & (new_val >> 4)) == 1); 
@@ -94,7 +103,7 @@ fn set_result_flags(cpu: &mut Cpu, new_val: u16) {
 
 pub fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xc6) as u16;
     let a_val = cpu.regs.get_a() as u16;
     let new_val = a_val + arg_val;
 
@@ -107,7 +116,7 @@ pub fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn adc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xce) as u16;
     let a_val = cpu.regs.get_a() as u16;
     let carry_val = match cpu.regs.get_flag_c() {
         true => 1,
@@ -124,7 +133,7 @@ pub fn adc_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xd6) as u16; 
     let a_val = cpu.regs.get_a() as u16;
     let new_val = a_val - arg_val;
 
@@ -137,7 +146,7 @@ pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn sbc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xde) as u16;
     let a_val = cpu.regs.get_a() as u16;
     let carry_val = match cpu.regs.get_flag_c() {
         true => 1,
@@ -154,7 +163,7 @@ pub fn sbc_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn and_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode);
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xe6);
     let a_val = cpu.regs.get_a();
     let new_val = a_val & arg_val;
     
@@ -169,7 +178,7 @@ pub fn and_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn xor_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode);
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xee);
     let a_val = cpu.regs.get_a();
     let new_val = a_val ^ arg_val;
 
@@ -184,7 +193,7 @@ pub fn xor_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn or_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode);
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xf6);
     let a_val = cpu.regs.get_a();
     let new_val = a_val | arg_val;
 
@@ -199,7 +208,7 @@ pub fn or_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let arg_val = type_a_reg_val(&cpu, &opcode) as u16;
+    let arg_val = type_a_reg_or_imm(cpu, opcode, 0xfe) as u16;
     let a_val = cpu.regs.get_a() as u16;
     let new_val = a_val - arg_val;
 
@@ -251,7 +260,7 @@ pub fn ld_u16_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let from_val = type_a_reg_val(cpu, &opcode);
+    let from_val = type_a_reg_val(cpu, opcode);
     match (opcode>>3) & 0x7 {
         0 => cpu.regs.put_b(from_val),
         1 => cpu.regs.put_c(from_val),

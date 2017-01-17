@@ -221,7 +221,7 @@ pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 /************* Misc. Arithmatic Instructions ************/
 
-fn inc_dec_get_val(cpu: &Cpu, opcode: u8) -> u8 {
+fn u8_inc_dec_get_val(cpu: &Cpu, opcode: u8) -> u8 {
     // inc opcodes are even, whereas dec opcodes are odd and +1 from their
     // inc counterparts. We can use a bitmask to make a single test for
     // both opcodes
@@ -241,7 +241,7 @@ fn inc_dec_get_val(cpu: &Cpu, opcode: u8) -> u8 {
     }
 }
 
-fn inc_dec_put_val(cpu: &mut Cpu, opcode: u8, new_val: u8) {
+fn u8_inc_dec_put_val(cpu: &mut Cpu, opcode: u8, new_val: u8) {
     // inc opcodes are even, whereas dec opcodes are odd and +1 from their
     // inc counterparts. We can use a bitmask to make a single test for
     // both opcodes
@@ -269,27 +269,63 @@ fn set_inc_dec_result_flags(cpu: &mut Cpu, old_val: u8, new_val: u8) {
 
 pub fn inc_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let old_val = inc_dec_get_val(cpu, opcode);
+    let old_val = u8_inc_dec_get_val(cpu, opcode);
     let new_val = old_val + 1;
 
     set_inc_dec_result_flags(cpu, old_val, new_val);
     cpu.regs.put_flag_n(false);
 
-    inc_dec_put_val(cpu, opcode, new_val);
+    u8_inc_dec_put_val(cpu, opcode, new_val);
 
     Ok(())
 }
 
 pub fn dec_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let old_val = inc_dec_get_val(cpu, opcode);
+    let old_val = u8_inc_dec_get_val(cpu, opcode);
     let new_val = old_val - 1;
 
     set_inc_dec_result_flags(cpu, old_val, new_val);
     cpu.regs.put_flag_n(true);
 
-    inc_dec_put_val(cpu, opcode, new_val);
+    u8_inc_dec_put_val(cpu, opcode, new_val);
 
+    Ok(())
+}
+
+fn u16_inc_dec_get_val(cpu: &Cpu, opcode: u8) -> u16 {
+    match opcode & 0xf0 {
+        0x00 => cpu.regs.get_bc(),
+        0x10 => cpu.regs.get_de(),
+        0x20 => cpu.regs.get_hl(),
+        0x30 => cpu.regs.get_sp(),
+        ____ => panic!("Unrecognized u16 inc/dec opcode: {}"),
+    }
+}
+
+fn u16_inc_dec_put_val(cpu: &mut Cpu, opcode: u8, new_val: u16) {
+    match opcode & 0xf0 {
+        0x00 => cpu.regs.put_bc(new_val),
+        0x10 => cpu.regs.put_de(new_val),
+        0x20 => cpu.regs.put_hl(new_val),
+        0x30 => cpu.regs.put_sp(new_val),
+        ____ => panic!("Unrecognized u16 inc/dec opcode: {}"),
+    }
+}
+
+pub fn inc_u16_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = u16_inc_dec_get_val(cpu, opcode);
+    let new_val = old_val + 1;
+    u16_inc_dec_put_val(cpu, opcode, new_val);
+    Ok(())
+}
+
+pub fn dec_u16_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = u16_inc_dec_get_val(cpu, opcode);
+    let new_val = old_val - 1;
+    u16_inc_dec_put_val(cpu, opcode, new_val);
     Ok(())
 }
 

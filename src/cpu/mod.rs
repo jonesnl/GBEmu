@@ -507,7 +507,7 @@ pub fn ld_sp_plus_signed_imm_to_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 /*********** Control Flow *************/
 
-pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
     
     let should_jump = match opcode {
@@ -530,6 +530,14 @@ pub fn jp_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
     let imm_val = (upper_imm_val<<8) | lower_imm_val;
     cpu.regs.put_pc(imm_val);
+    Ok(())
+}
+
+pub fn jp_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let addr = cpu.regs.get_hl();
+    let jump_addr = cpu.read16(addr);
+
+    cpu.regs.put_pc(jump_addr);
     Ok(())
 }
 

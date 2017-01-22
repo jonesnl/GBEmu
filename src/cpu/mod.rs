@@ -490,22 +490,52 @@ pub fn ld_hl_to_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+fn u16_plus_i8(val1_u16: u16, val2_i8: i8) -> u16 {
+    let val2_i16 = val2_i8 as i16;
+    if val2_i8 < 0 {
+        val1_u16.wrapping_sub(val2_i16.wrapping_neg() as u16)
+    } else {
+        val1_u16.wrapping_add(val2_i16 as u16)
+    }
+}
+
 pub fn ld_sp_plus_signed_imm_to_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let sp_val = cpu.regs.get_sp();
     cpu.incr_pc();
     let signed_imm = cpu.get_opcode() as i8;
-    let sized_signed_imm = signed_imm as i16;
     // XXX: There must be a better way to add signed and unsigned numbers while
     // allowing wrapping. TODO also be sure to test this!!!
-    let new_sp_val = {
-        if signed_imm < 0 {sp_val.wrapping_sub((-sized_signed_imm) as u16)}
-        else {sp_val.wrapping_add(signed_imm as u16)}
-    };
+    let new_sp_val = u16_plus_i8(sp_val, signed_imm);
     cpu.regs.put_hl(new_sp_val);
     Ok(())
 }
 
 /*********** Control Flow *************/
+
+pub fn jr_imm8_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let orig_pc = cpu.regs.get_pc();
+
+    let should_jump = match opcode {
+        0x18 => true,
+        0x20 => !cpu.regs.get_flag_z(),
+        0x28 => cpu.regs.get_flag_z(),
+        0x30 => !cpu.regs.get_flag_c(),
+        0x38 => cpu.regs.get_flag_c(),
+        ____ => panic!("Unrecognized jr opcode {}", opcode),
+    };
+
+    cpu.incr_pc();
+    let imm_val = cpu.get_opcode() as i8;
+
+    if !should_jump {
+        return Ok(())
+    }
+
+    let new_pc = u16_plus_i8(orig_pc, imm_val);
+    cpu.regs.put_pc(new_pc);
+    Ok(())
+}
 
 pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
@@ -528,8 +558,8 @@ pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
         return Ok(());
     }
 
-    let imm_val = (upper_imm_val<<8) | lower_imm_val;
-    cpu.regs.put_pc(imm_val);
+    let new_pc = (upper_imm_val<<8) | lower_imm_val;
+    cpu.regs.put_pc(new_pc);
     Ok(())
 }
 

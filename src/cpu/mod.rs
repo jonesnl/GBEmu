@@ -329,6 +329,32 @@ pub fn dec_u16_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+/************* Shift/Rotate instructions ******************/
+
+pub fn rlca_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let a_val = cpu.regs.get_a();
+    let new_a_val = a_val.rotate_left(1);
+
+    cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_c((new_a_val & 1) == 1);
+
+    Ok(())
+}
+
+pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let a_val = cpu.regs.get_a();
+    let old_c_flag = cpu.regs.get_flag_c();
+
+    let new_a_val = (a_val << 1) | (old_c_flag as u8);
+
+    cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_c((a_val >> 7) == 1);
+
+    Ok(())
+}
+
 /************* Load instructions *****************/
 
 pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
@@ -490,6 +516,8 @@ pub fn ld_hl_to_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+// XXX: There must be a better way to add signed and unsigned numbers while
+// allowing wrapping. TODO also be sure to test this!!!
 fn u16_plus_i8(val1_u16: u16, val2_i8: i8) -> u16 {
     let val2_i16 = val2_i8 as i16;
     if val2_i8 < 0 {
@@ -503,8 +531,6 @@ pub fn ld_sp_plus_signed_imm_to_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let sp_val = cpu.regs.get_sp();
     cpu.incr_pc();
     let signed_imm = cpu.get_opcode() as i8;
-    // XXX: There must be a better way to add signed and unsigned numbers while
-    // allowing wrapping. TODO also be sure to test this!!!
     let new_sp_val = u16_plus_i8(sp_val, signed_imm);
     cpu.regs.put_hl(new_sp_val);
     Ok(())

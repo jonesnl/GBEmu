@@ -336,7 +336,9 @@ pub fn rlca_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let new_a_val = a_val.rotate_left(1);
 
     cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_z(new_a_val == 0);
     cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((new_a_val & 1) == 1);
 
     Ok(())
@@ -349,7 +351,9 @@ pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let new_a_val = (a_val << 1) | (old_c_flag as u8);
 
     cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_z(new_a_val == 0);
     cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((a_val >> 7) == 1);
 
     Ok(())
@@ -597,6 +601,19 @@ pub fn jp_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+/*********** Special code ********************/
+
+pub fn daa_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let a_val = cpu.regs.get_a();
+    let mut new_a_val = a_val % 10;
+    let upper_a_val = a_val / 10;
+
+    new_a_val |= (upper_a_val % 10)<<4;
+    println!("{} {} {}", a_val, new_a_val, upper_a_val);
+    cpu.regs.put_a(new_a_val);
+    Ok(())
+}
+
 pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
     // Get next instruction
     cpu.incr_pc();
@@ -694,4 +711,17 @@ fn ld() {
     assert_eq!(cpu.regs.get_b(), 0xff);
     assert_eq!(cpu.regs.get_c(), 0xff);
     assert_eq!(cpu.regs.get_d(), 0x00);
+}
+
+#[test]
+fn daa() {
+    let mut cpu = setup_test![
+        0x3e, 0x10, 0x27
+    ];
+    loop {
+        if execute_instruction(&mut cpu).is_err() {
+            break;
+        }
+    }
+    assert_eq!(cpu.regs.get_a(), 0x16);
 }

@@ -115,6 +115,36 @@ pub fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn add_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let hl_val = cpu.regs.get_hl() as u32;
+    let arg_val = match opcode {
+        0x09 => cpu.regs.get_bc(),
+        0x19 => cpu.regs.get_de(),
+        0x29 => cpu.regs.get_hl(),
+        0x39 => cpu.regs.get_sp(),
+        ____ => panic!("unrecognized opcode {}", opcode),
+    } as u32;
+
+    let new_val = hl_val + arg_val;
+
+    let h_flag = {
+        let mask = (1<<12) - 1;
+        if (hl_val & mask) + (arg_val & mask) > mask {
+            true
+        } else {
+            false
+        }
+    };
+
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(h_flag);
+    cpu.regs.put_flag_c(new_val>>16 != 0);
+
+    cpu.regs.put_hl(new_val as u16);
+    Ok(())
+}
+
 pub fn adc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xce) as u16;

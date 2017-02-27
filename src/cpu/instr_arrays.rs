@@ -18,7 +18,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         inc_u8_instr,
         dec_u8_instr,
         ld_u8_imm_instr,
-        noop_instr,
+        rrca_instr,
         stop_instr, // 0x10
         ld_u16_imm_instr,
         ld_to_mem_instr,
@@ -34,7 +34,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         inc_u8_instr,
         dec_u8_instr,
         ld_u8_imm_instr,
-        noop_instr,
+        rrc_instr,
         jr_imm8_instr, // 0x20
         ld_u16_imm_instr,
         ld_to_mem_instr,

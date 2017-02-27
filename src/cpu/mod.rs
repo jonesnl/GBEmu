@@ -369,7 +369,7 @@ pub fn rlca_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_z(new_a_val == 0);
     cpu.regs.put_flag_n(false);
     cpu.regs.put_flag_h(false);
-    cpu.regs.put_flag_c((new_a_val & 1) == 1);
+    cpu.regs.put_flag_c((a_val>>7) == 1);
 
     Ok(())
 }
@@ -385,6 +385,34 @@ pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_n(false);
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((a_val >> 7) == 1);
+
+    Ok(())
+}
+
+pub fn rrca_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let a_val = cpu.regs.get_a();
+    let new_a_val = a_val.rotate_right(1);
+
+    cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_z(new_a_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c((a_val & 1) == 1);
+
+    Ok(())
+}
+
+pub fn rrc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let a_val = cpu.regs.get_a();
+    let old_c_flag = cpu.regs.get_flag_c();
+
+    let new_a_val = (a_val >> 1) | ((old_c_flag as u8) << 7);
+
+    cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_z(new_a_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c((a_val & 1) == 1);
 
     Ok(())
 }

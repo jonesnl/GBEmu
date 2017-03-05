@@ -672,6 +672,27 @@ pub fn daa_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn cpl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let a_val = cpu.regs.get_a();
+    let new_a_val = !a_val;
+
+    cpu.regs.put_a(new_a_val);
+    cpu.regs.put_flag_n(true);
+    cpu.regs.put_flag_h(true);
+
+    Ok(())
+}
+
+pub fn ccf_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let old_c_flag = cpu.regs.get_flag_c();
+
+    cpu.regs.put_flag_c(!old_c_flag);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+
+    Ok(())
+}
+
 pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
     // Get next instruction
     cpu.incr_pc();

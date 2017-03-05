@@ -760,6 +760,38 @@ pub fn ret_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 /*********** Special code ********************/
 
+pub fn push_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let val = match opcode {
+        0xc5 => cpu.regs.get_bc(),
+        0xd5 => cpu.regs.get_de(),
+        0xe5 => cpu.regs.get_hl(),
+        0xf5 => cpu.regs.get_af(),
+        ____ => panic!("Unrecognized push instruction {}", opcode),
+    };
+
+    cpu.push_u16(val);
+
+    Ok(())
+}
+
+pub fn pop_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let val = cpu.pop_u16();
+
+    match opcode {
+        0xc1 => cpu.regs.put_bc(val),
+        0xd1 => cpu.regs.put_de(val),
+        0xe1 => cpu.regs.put_hl(val),
+        0xf1 => cpu.regs.put_af(val),
+        ____ => panic!("Unrecognized pop instruction {}", opcode),
+    };
+
+    Ok(())
+}
+
 pub fn daa_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let a_val = cpu.regs.get_a();
     let mut new_a_val = a_val % 10;

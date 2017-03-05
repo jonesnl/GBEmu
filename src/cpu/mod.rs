@@ -436,7 +436,7 @@ pub fn rlca_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
-pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rla_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let a_val = cpu.regs.get_a();
     let old_c_flag = cpu.regs.get_flag_c();
 

@@ -683,6 +683,14 @@ pub fn cpl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn scf_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(true);
+
+    Ok(())
+}
+
 pub fn ccf_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let old_c_flag = cpu.regs.get_flag_c();
 

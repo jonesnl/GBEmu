@@ -30,6 +30,33 @@ impl Cpu {
         self.regs.put_pc(pc+1);
     }
 
+    pub fn push_u8(&mut self, val: u8) {
+        let sp = self.regs.get_sp();
+        self.write8(sp, val);
+        self.regs.put_sp(sp.wrapping_add(1));
+    }
+
+    pub fn push_u16(&mut self, val: u16) {
+        let sp = self.regs.get_sp();
+        self.write16(sp, val);
+        self.regs.put_sp(sp.wrapping_add(2));
+    }
+
+    pub fn pop_u8(&mut self) -> u8 {
+        let new_sp = self.regs.get_sp().wrapping_sub(1);
+        self.regs.put_sp(new_sp);
+        self.read8(new_sp)
+    }
+
+    pub fn pop_u16(&mut self) -> u16 {
+        let new_sp = self.regs.get_sp().wrapping_sub(2);
+        self.regs.put_sp(new_sp);
+        self.read16(new_sp)
+    }
+
+    pub fn jump(&mut self, addr: u16) {
+        self.regs.put_pc(addr.wrapping_sub(1));
+    }
 }
 
 impl Bus for Cpu {
@@ -621,7 +648,7 @@ pub fn jr_imm8_instr(cpu: &mut Cpu) -> Result<(), ()> {
     }
 
     let new_pc = u16_plus_i8(orig_pc, imm_val);
-    cpu.regs.put_pc(new_pc.wrapping_sub(1));
+    cpu.jump(new_pc);
     Ok(())
 }
 
@@ -647,7 +674,7 @@ pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
     }
 
     let new_pc = (upper_imm_val<<8) | lower_imm_val;
-    cpu.regs.put_pc(new_pc.wrapping_sub(1));
+    cpu.jump(new_pc);
     Ok(())
 }
 
@@ -655,7 +682,26 @@ pub fn jp_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let addr = cpu.regs.get_hl();
     let jump_addr = cpu.read16(addr);
 
-    cpu.regs.put_pc(jump_addr.wrapping_sub(1));
+    cpu.jump(jump_addr);
+    Ok(())
+}
+
+pub fn restart_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let restart_addr = match opcode {
+        0xc7 => 0x00,
+        0xcf => 0x08,
+        0xd7 => 0x10,
+        0xdf => 0x18,
+        0xe7 => 0x20,
+        0xef => 0x28,
+        0xf7 => 0x30,
+        0xff => 0x38,
+        ____ => panic!("Unrecognized rst opcode {}", opcode),
+    } as u16;
+
+    cpu.jump(restart_addr);
     Ok(())
 }
 
@@ -678,12 +724,9 @@ pub fn call_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let pc = cpu.regs.get_pc();
     let jump_addr = cpu.read16(pc.wrapping_add(1));
 
-    let sp = cpu.regs.get_sp();
-    cpu.write16(sp, pc.wrapping_add(3));
-    cpu.regs.put_sp(sp.wrapping_add(2));
+    cpu.push_u16(pc.wrapping_add(3));
 
-    // Subtract 1 since pc+1 happens on every instruction
-    cpu.regs.put_pc(jump_addr.wrapping_sub(1));
+    cpu.jump(jump_addr);
 
     Ok(())
 }
@@ -708,12 +751,9 @@ pub fn ret_instr(cpu: &mut Cpu) -> Result<(), ()> {
         return Ok(())
     }
 
-    let new_sp = cpu.regs.get_sp().wrapping_sub(2);
-    let ret_addr = cpu.read16(new_sp);
-    cpu.regs.put_sp(new_sp);
+    let ret_addr = cpu.pop_u16();
 
-    // Subtract 1 since pc+1 happens on every instruction
-    cpu.regs.put_pc(ret_addr.wrapping_sub(1));
+    cpu.jump(ret_addr);
 
     Ok(())
 }

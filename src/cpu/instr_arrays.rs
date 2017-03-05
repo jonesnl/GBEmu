@@ -202,7 +202,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         call_instr,
         noop_instr,
         add_instr,
-        noop_instr,
+        restart_instr,
         ret_instr,
         ret_instr,
         jp_imm16_instr,
@@ -210,7 +210,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         call_instr,
         call_instr,
         adc_instr,
-        noop_instr,
+        restart_instr,
         ret_instr, // 0xd0
         noop_instr,
         jp_imm16_instr,
@@ -218,7 +218,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         call_instr,
         noop_instr,
         sub_instr,
-        noop_instr,
+        restart_instr,
         ret_instr,
         ret_instr,
         jp_imm16_instr,
@@ -226,7 +226,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         call_instr,
         undef_instr,
         sbc_instr,
-        noop_instr,
+        restart_instr,
         ld_from_a_to_mem_instr, // 0xe0
         noop_instr,
         ld_from_a_to_mem_instr,
@@ -234,7 +234,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         noop_instr,
         and_instr,
-        noop_instr,
+        restart_instr,
         noop_instr,
         jp_hl_instr,
         ld_from_a_to_mem_instr,
@@ -242,7 +242,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         undef_instr,
         xor_instr,
-        noop_instr,
+        restart_instr,
         ld_from_mem_to_a_instr, // 0xf0
         noop_instr,
         ld_from_mem_to_a_instr,
@@ -250,7 +250,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         noop_instr,
         or_instr,
-        noop_instr,
+        restart_instr,
         ld_sp_plus_signed_imm_to_hl_instr,
         ld_hl_to_sp_instr,
         ld_from_mem_to_a_instr,
@@ -258,7 +258,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         undef_instr,
         undef_instr,
         cp_instr,
-        noop_instr,
+        restart_instr,
         ];
 
 pub static CB_INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =

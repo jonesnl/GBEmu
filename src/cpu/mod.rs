@@ -91,10 +91,27 @@ pub fn noop_instr(_: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+// TODO
 pub fn stop_instr(_: &mut Cpu) -> Result<(), ()> {
     Err(())
 }
 
+// TODO
+pub fn halt_instr(_: &mut Cpu) -> Result<(), ()> {
+    Err(())
+}
+
+// TODO
+pub fn ei_instr(_: &mut Cpu) -> Result<(), ()> {
+    Err(())
+}
+
+// TODO
+pub fn di_instr(_: &mut Cpu) -> Result<(), ()> {
+    Err(())
+}
+
+// TODO
 pub fn undef_instr(_: &mut Cpu) -> Result<(), ()> {
     Err(())
 }
@@ -169,6 +186,24 @@ pub fn add_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_val>>16 != 0);
 
     cpu.regs.put_hl(new_val as u16);
+    Ok(())
+}
+
+pub fn add_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    cpu.incr_pc();
+    let imm_val = cpu.get_opcode() as i8;
+    let old_sp = cpu.regs.get_sp();
+    let new_sp = u16_plus_i8(old_sp, imm_val);
+
+    let h_flag = (old_sp>>4)&1 != (new_sp>>4)&1;
+    let c_flag = (old_sp>>7) != (new_sp>>7);
+
+    cpu.regs.put_sp(new_sp);
+    cpu.regs.put_flag_z(false);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(h_flag);
+    cpu.regs.put_flag_c(c_flag);
+
     Ok(())
 }
 

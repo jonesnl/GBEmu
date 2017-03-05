@@ -621,7 +621,7 @@ pub fn jr_imm8_instr(cpu: &mut Cpu) -> Result<(), ()> {
     }
 
     let new_pc = u16_plus_i8(orig_pc, imm_val);
-    cpu.regs.put_pc(new_pc);
+    cpu.regs.put_pc(new_pc.wrapping_sub(1));
     Ok(())
 }
 
@@ -647,7 +647,7 @@ pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
     }
 
     let new_pc = (upper_imm_val<<8) | lower_imm_val;
-    cpu.regs.put_pc(new_pc);
+    cpu.regs.put_pc(new_pc.wrapping_sub(1));
     Ok(())
 }
 
@@ -655,7 +655,36 @@ pub fn jp_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let addr = cpu.regs.get_hl();
     let jump_addr = cpu.read16(addr);
 
-    cpu.regs.put_pc(jump_addr);
+    cpu.regs.put_pc(jump_addr.wrapping_sub(1));
+    Ok(())
+}
+
+pub fn call_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let should_call = match opcode {
+        0xc4 => !cpu.regs.get_flag_z(),
+        0xcc => cpu.regs.get_flag_z(),
+        0xcd => true,
+        0xd4 => !cpu.regs.get_flag_c(),
+        0xdc => cpu.regs.get_flag_c(),
+        ____ => panic!("Unrecognized call opcode {}", opcode),
+    };
+
+    if !should_call {
+        return Ok(())
+    }
+
+    let pc = cpu.regs.get_pc();
+    let jump_addr = cpu.read16(pc.wrapping_add(1));
+
+    let sp = cpu.regs.get_sp();
+    cpu.write16(sp, pc.wrapping_add(3));
+    cpu.regs.put_sp(sp.wrapping_add(2));
+
+    // Subtract 1 since pc+1 happens on every instruction
+    cpu.regs.put_pc(jump_addr.wrapping_sub(1));
+
     Ok(())
 }
 
@@ -683,7 +712,8 @@ pub fn ret_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let ret_addr = cpu.read16(new_sp);
     cpu.regs.put_sp(new_sp);
 
-    cpu.regs.put_pc(ret_addr);
+    // Subtract 1 since pc+1 happens on every instruction
+    cpu.regs.put_pc(ret_addr.wrapping_sub(1));
 
     Ok(())
 }

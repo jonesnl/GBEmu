@@ -195,7 +195,7 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         cp_instr,
         cp_instr,
         cp_instr,
-        noop_instr, // 0xc0
+        ret_instr, // 0xc0
         noop_instr,
         jp_imm16_instr,
         jp_imm16_instr,
@@ -203,15 +203,15 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         noop_instr,
         add_instr,
         noop_instr,
-        noop_instr,
-        noop_instr,
+        ret_instr,
+        ret_instr,
         jp_imm16_instr,
         cb_instr, // 0xcb
         noop_instr,
         noop_instr,
         adc_instr,
         noop_instr,
-        noop_instr, // 0xd0
+        ret_instr, // 0xd0
         noop_instr,
         jp_imm16_instr,
         undef_instr,
@@ -219,8 +219,8 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         noop_instr,
         sub_instr,
         noop_instr,
-        noop_instr,
-        noop_instr,
+        ret_instr,
+        ret_instr,
         jp_imm16_instr,
         undef_instr,
         noop_instr,

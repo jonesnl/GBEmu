@@ -659,6 +659,35 @@ pub fn jp_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn ret_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+
+    let should_return = match opcode {
+        0xc0 => !cpu.regs.get_flag_z(),
+        0xc8 => cpu.regs.get_flag_z(),
+        0xc9 => true,
+        0xd0 => !cpu.regs.get_flag_c(),
+        0xd8 => cpu.regs.get_flag_c(),
+        0xd9 => {
+            // TODO enable interrupts here
+            true
+        },
+        ____ => panic!("Unrecognized ret opcode {}", opcode),
+    };
+
+    if !should_return {
+        return Ok(())
+    }
+
+    let new_sp = cpu.regs.get_sp().wrapping_sub(2);
+    let ret_addr = cpu.read16(new_sp);
+    cpu.regs.put_sp(new_sp);
+
+    cpu.regs.put_pc(ret_addr);
+
+    Ok(())
+}
+
 /*********** Special code ********************/
 
 pub fn daa_instr(cpu: &mut Cpu) -> Result<(), ()> {

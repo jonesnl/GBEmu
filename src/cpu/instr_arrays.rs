@@ -262,14 +262,14 @@ pub static INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
         ];
 
 pub static CB_INSTR: [fn(&mut Cpu) -> Result<(), ()> ; INSTR_ARRAY_SIZE] =
-        [noop_instr, // 0x00
-        noop_instr,
-        noop_instr,
-        noop_instr,
-        noop_instr,
-        noop_instr,
-        noop_instr,
-        noop_instr,
+        [rlc_instr, // 0x00
+        rlc_instr,
+        rlc_instr,
+        rlc_instr,
+        rlc_instr,
+        rlc_instr,
+        rlc_instr,
+        rlc_instr,
         noop_instr,
         noop_instr,
         noop_instr,

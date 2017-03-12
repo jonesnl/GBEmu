@@ -116,7 +116,7 @@ pub fn undef_instr(_: &mut Cpu) -> Result<(), ()> {
     Err(())
 }
 
-fn type_a_reg_val(cpu: &Cpu, opcode: u8) -> u8 {
+fn get_type_a_reg(cpu: &Cpu, opcode: u8) -> u8 {
     match opcode & 0x7 {
         0 => cpu.regs.get_b(),
         1 => cpu.regs.get_c(),
@@ -130,12 +130,29 @@ fn type_a_reg_val(cpu: &Cpu, opcode: u8) -> u8 {
     }
 }
 
+fn put_type_a_reg(cpu: &mut Cpu, opcode: u8, val: u8) {
+    match opcode & 0x7 {
+        0 => cpu.regs.put_b(val),
+        1 => cpu.regs.put_c(val),
+        2 => cpu.regs.put_d(val),
+        3 => cpu.regs.put_e(val),
+        4 => cpu.regs.put_h(val),
+        5 => cpu.regs.put_l(val),
+        6 => {
+            let hl = cpu.regs.get_hl();
+            cpu.write8(hl, val);
+        },
+        7 => cpu.regs.put_a(val),
+        _ => panic!("Unrecognized register!"),
+    }
+}
+
 fn type_a_reg_or_imm(cpu: &mut Cpu, opcode: u8, imm_opcode: u8) -> u8 {
     if imm_opcode == opcode {
         cpu.incr_pc();
         cpu.get_opcode()
     } else {
-        type_a_reg_val(cpu, opcode)
+        get_type_a_reg(cpu, opcode)
     }
 }
 
@@ -479,6 +496,21 @@ pub fn rrc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = get_type_a_reg(cpu, opcode);
+
+    let new_val = old_val.rotate_left(1);
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(old_val>>7 == 1);
+    put_type_a_reg(cpu, opcode, new_val);
+
+    Ok(())
+}
+
 /************* Load instructions *****************/
 
 pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
@@ -523,7 +555,7 @@ pub fn ld_u16_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
 pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let opcode = cpu.get_opcode();
-    let from_val = type_a_reg_val(cpu, opcode);
+    let from_val = get_type_a_reg(cpu, opcode);
     match (opcode>>3) & 0x7 {
         0 => cpu.regs.put_b(from_val),
         1 => cpu.regs.put_c(from_val),

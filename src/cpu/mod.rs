@@ -511,6 +511,20 @@ pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn rcc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = get_type_a_reg(cpu, opcode);
+
+    let new_val = old_val.rotate_right(1);
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(old_val & 1 == 1);
+
+    Ok(())
+}
+
 /************* Load instructions *****************/
 
 pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {

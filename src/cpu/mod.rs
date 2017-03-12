@@ -525,6 +525,40 @@ pub fn rcc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+pub fn rl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = get_type_a_reg(cpu, opcode);
+
+    let new_carry = (old_val>>7) == 1;
+    let mut new_val = old_val<<1;
+    new_val |= cpu.regs.get_flag_c() as u8;
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(new_carry);
+    put_type_a_reg(cpu, opcode, new_val);
+
+    Ok(())
+}
+
+pub fn rr_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = get_type_a_reg(cpu, opcode);
+
+    let new_carry = old_val & 1 == 1;
+    let mut new_val = old_val>>1;
+    new_val |= (cpu.regs.get_flag_c() as u8)<<7;
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(new_carry);
+    put_type_a_reg(cpu, opcode, new_val);
+
+    Ok(())
+}
+
 /************* Load instructions *****************/
 
 pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {

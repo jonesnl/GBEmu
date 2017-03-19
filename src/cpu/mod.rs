@@ -580,6 +580,40 @@ pub fn sra_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let old_val = get_type_a_reg(cpu, opcode);
 
     let new_carry = (old_val & 1) != 0;
+    let mut new_val = old_val>>1;
+    new_val |= old_val & 0b1000_0000;
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(new_carry);
+    put_type_a_reg(cpu, opcode, new_val);
+
+    Ok(())
+}
+
+pub fn swap_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = get_type_a_reg(cpu, opcode);
+
+    let old_upper_nibble = old_val>>4;
+    let old_lower_nibble = old_val & 0b1111;
+    let new_val = (old_upper_nibble) | (old_lower_nibble<<4);
+
+    cpu.regs.put_flag_z(new_val == 0);
+    cpu.regs.put_flag_n(false);
+    cpu.regs.put_flag_h(false);
+    cpu.regs.put_flag_c(false);
+    put_type_a_reg(cpu, opcode, new_val);
+
+    Ok(())
+}
+
+pub fn srl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+    let opcode = cpu.get_opcode();
+    let old_val = get_type_a_reg(cpu, opcode);
+
+    let new_carry = (old_val & 1) != 0;
     let new_val = old_val>>1;
 
     cpu.regs.put_flag_z(new_val == 0);

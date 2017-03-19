@@ -625,6 +625,32 @@ pub fn srl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     Ok(())
 }
 
+macro_rules! _bit {
+    ($name:ident, $bit:expr) => {
+        pub fn $name(cpu: &mut Cpu) -> Result<(), ()> {
+            let opcode = cpu.get_opcode();
+            let test_val = get_type_a_reg(cpu, opcode);
+
+            let test_bit_mask = 1<<$bit;
+            cpu.regs.put_flag_z((test_val & test_bit_mask) != 0);
+            cpu.regs.put_flag_n(false);
+            cpu.regs.put_flag_h(true);
+
+            Ok(())
+        }
+    };
+}
+
+_bit!(bit0_instr, 0);
+_bit!(bit1_instr, 1);
+_bit!(bit2_instr, 2);
+_bit!(bit3_instr, 3);
+_bit!(bit4_instr, 4);
+_bit!(bit5_instr, 5);
+_bit!(bit6_instr, 6);
+_bit!(bit7_instr, 7);
+
+
 /************* Load instructions *****************/
 
 pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {

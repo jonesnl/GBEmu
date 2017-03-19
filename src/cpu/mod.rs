@@ -650,6 +650,50 @@ _bit!(bit5_instr, 5);
 _bit!(bit6_instr, 6);
 _bit!(bit7_instr, 7);
 
+macro_rules! _res {
+    ($name:ident, $bit:expr) => {
+        pub fn $name(cpu: &mut Cpu) -> Result<(), ()> {
+            let opcode = cpu.get_opcode();
+            let old_val = get_type_a_reg(cpu, opcode);
+
+            put_type_a_reg(cpu, opcode, old_val & !(1<<$bit));
+
+            Ok(())
+        }
+    };
+}
+
+_res!(res0_instr, 0);
+_res!(res1_instr, 1);
+_res!(res2_instr, 2);
+_res!(res3_instr, 3);
+_res!(res4_instr, 4);
+_res!(res5_instr, 5);
+_res!(res6_instr, 6);
+_res!(res7_instr, 7);
+
+macro_rules! _set {
+    ($name:ident, $bit:expr) => {
+        pub fn $name(cpu: &mut Cpu) -> Result<(), ()> {
+            let opcode = cpu.get_opcode();
+            let old_val = get_type_a_reg(cpu, opcode);
+
+            put_type_a_reg(cpu, opcode, old_val | (1<<$bit));
+
+            Ok(())
+        }
+    };
+}
+
+_set!(set0_instr, 0);
+_set!(set1_instr, 1);
+_set!(set2_instr, 2);
+_set!(set3_instr, 3);
+_set!(set4_instr, 4);
+_set!(set5_instr, 5);
+_set!(set6_instr, 6);
+_set!(set7_instr, 7);
+
 
 /************* Load instructions *****************/
 

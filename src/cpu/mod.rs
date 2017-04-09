@@ -81,7 +81,7 @@ pub fn execute_instruction(cpu: &mut Cpu) -> Result<(), ()> {
     // Get instruction (XXX expand)
     // Look up instruction in instruction table
     // Execute instruction
-    let result = INSTR[cpu.get_opcode() as usize](cpu);
+    let result = (INSTR[cpu.get_opcode() as usize].func)(cpu);
     // wait
     cpu.incr_pc();
     result
@@ -1086,7 +1086,7 @@ pub fn ccf_instr(cpu: &mut Cpu) -> Result<(), ()> {
 pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
     // Get next instruction
     cpu.incr_pc();
-    let result = CB_INSTR[cpu.get_opcode() as usize](cpu);
+    let result = (CB_INSTR[cpu.get_opcode() as usize].func)(cpu);
     result
 }
 

@@ -1,15 +1,27 @@
 #![allow(dead_code)]
 
 mod instr_arrays;
+mod power;
 
 use registers::Registers;
 use hw::memory::{Bus, BusWidth, Memory};
 
 use self::instr_arrays::*;
 
+pub type InstructionRetType = Result<BranchResult, ()>;
+
+pub enum BranchResult {
+    NoBranch,
+    BranchTaken,
+    BranchNotTaken,
+}
+
+use self::BranchResult::*;
+
 pub struct Cpu {
     regs: Registers,
     memory: Memory,
+    power_state: PowerState,
 }
 
 impl Cpu {
@@ -77,7 +89,7 @@ impl Bus for Cpu {
     }
 }
 
-pub fn execute_instruction(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn execute_instruction(cpu: &mut Cpu) -> InstructionRetType {
     // Get instruction (XXX expand)
     // Look up instruction in instruction table
     // Execute instruction
@@ -87,32 +99,32 @@ pub fn execute_instruction(cpu: &mut Cpu) -> Result<(), ()> {
     result
 }
 
-pub fn noop_instr(_: &mut Cpu) -> Result<(), ()> {
-    Ok(())
+pub fn noop_instr(_: &mut Cpu) -> InstructionRetType {
+    Ok(NoBranch)
 }
 
 // TODO
-pub fn stop_instr(_: &mut Cpu) -> Result<(), ()> {
+pub fn stop_instr(_: &mut Cpu) -> InstructionRetType {
     Err(())
 }
 
 // TODO
-pub fn halt_instr(_: &mut Cpu) -> Result<(), ()> {
+pub fn halt_instr(_: &mut Cpu) -> InstructionRetType {
     Err(())
 }
 
 // TODO
-pub fn ei_instr(_: &mut Cpu) -> Result<(), ()> {
+pub fn ei_instr(_: &mut Cpu) -> InstructionRetType {
     Err(())
 }
 
 // TODO
-pub fn di_instr(_: &mut Cpu) -> Result<(), ()> {
+pub fn di_instr(_: &mut Cpu) -> InstructionRetType {
     Err(())
 }
 
 // TODO
-pub fn undef_instr(_: &mut Cpu) -> Result<(), ()> {
+pub fn undef_instr(_: &mut Cpu) -> InstructionRetType {
     Err(())
 }
 
@@ -163,7 +175,7 @@ fn set_result_flags(cpu: &mut Cpu, new_val: u16) {
     cpu.regs.put_flag_c((1 & (new_val >> 8)) == 1);
 }
 
-pub fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn add_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xc6) as u16;
     let a_val = cpu.regs.get_a() as u16;
@@ -173,10 +185,10 @@ pub fn add_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_n(false);
 
     cpu.regs.put_a(new_val as u8);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn add_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn add_hl_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let hl_val = cpu.regs.get_hl() as u32;
     let arg_val = match opcode {
@@ -203,10 +215,10 @@ pub fn add_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_val>>16 != 0);
 
     cpu.regs.put_hl(new_val as u16);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn add_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn add_sp_instr(cpu: &mut Cpu) -> InstructionRetType {
     cpu.incr_pc();
     let imm_val = cpu.get_opcode() as i8;
     let old_sp = cpu.regs.get_sp();
@@ -221,10 +233,10 @@ pub fn add_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_h(h_flag);
     cpu.regs.put_flag_c(c_flag);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn adc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn adc_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xce) as u16;
     let a_val = cpu.regs.get_a() as u16;
@@ -238,10 +250,10 @@ pub fn adc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_n(false);
 
     cpu.regs.put_a(new_val as u8);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn sub_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xd6) as u16; 
     let a_val = cpu.regs.get_a() as u16;
@@ -251,10 +263,10 @@ pub fn sub_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_n(true);
 
     cpu.regs.put_a(new_val as u8);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn sbc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn sbc_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xde) as u16;
     let a_val = cpu.regs.get_a() as u16;
@@ -268,10 +280,10 @@ pub fn sbc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_n(true);
 
     cpu.regs.put_a(new_val as u8);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn and_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn and_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xe6);
     let a_val = cpu.regs.get_a();
@@ -283,10 +295,10 @@ pub fn and_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(false);
     
     cpu.regs.put_a(new_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn xor_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn xor_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xee);
     let a_val = cpu.regs.get_a();
@@ -298,10 +310,10 @@ pub fn xor_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(false);
 
     cpu.regs.put_a(new_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn or_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn or_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xf6);
     let a_val = cpu.regs.get_a();
@@ -313,10 +325,10 @@ pub fn or_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(false);
 
     cpu.regs.put_a(new_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn cp_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xfe) as u16;
     let a_val = cpu.regs.get_a() as u16;
@@ -325,7 +337,7 @@ pub fn cp_instr(cpu: &mut Cpu) -> Result<(), ()> {
     set_result_flags(cpu, new_val);
     cpu.regs.put_flag_n(true);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
 /************* Misc. Arithmatic Instructions ************/
@@ -376,7 +388,7 @@ fn set_inc_dec_result_flags(cpu: &mut Cpu, old_val: u8, new_val: u8) {
     cpu.regs.put_flag_h((new_val>>4) & 1 == 1);
 }
 
-pub fn inc_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn inc_u8_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = u8_inc_dec_get_val(cpu, opcode);
     let new_val = old_val + 1;
@@ -386,10 +398,10 @@ pub fn inc_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
     u8_inc_dec_put_val(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn dec_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn dec_u8_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = u8_inc_dec_get_val(cpu, opcode);
     let new_val = old_val - 1;
@@ -399,7 +411,7 @@ pub fn dec_u8_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
     u8_inc_dec_put_val(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
 fn u16_inc_dec_get_val(cpu: &Cpu, opcode: u8) -> u16 {
@@ -422,25 +434,25 @@ fn u16_inc_dec_put_val(cpu: &mut Cpu, opcode: u8, new_val: u16) {
     }
 }
 
-pub fn inc_u16_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn inc_u16_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = u16_inc_dec_get_val(cpu, opcode);
     let new_val = old_val + 1;
     u16_inc_dec_put_val(cpu, opcode, new_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn dec_u16_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn dec_u16_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = u16_inc_dec_get_val(cpu, opcode);
     let new_val = old_val - 1;
     u16_inc_dec_put_val(cpu, opcode, new_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
 /************* Shift/Rotate instructions ******************/
 
-pub fn rlca_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rlca_instr(cpu: &mut Cpu) -> InstructionRetType {
     let a_val = cpu.regs.get_a();
     let new_a_val = a_val.rotate_left(1);
 
@@ -450,10 +462,10 @@ pub fn rlca_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((a_val>>7) == 1);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rla_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rla_instr(cpu: &mut Cpu) -> InstructionRetType {
     let a_val = cpu.regs.get_a();
     let old_c_flag = cpu.regs.get_flag_c();
 
@@ -465,10 +477,10 @@ pub fn rla_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((a_val >> 7) == 1);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rrca_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rrca_instr(cpu: &mut Cpu) -> InstructionRetType {
     let a_val = cpu.regs.get_a();
     let new_a_val = a_val.rotate_right(1);
 
@@ -478,10 +490,10 @@ pub fn rrca_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((a_val & 1) == 1);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rrc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rrc_instr(cpu: &mut Cpu) -> InstructionRetType {
     let a_val = cpu.regs.get_a();
     let old_c_flag = cpu.regs.get_flag_c();
 
@@ -493,10 +505,10 @@ pub fn rrc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c((a_val & 1) == 1);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rlc_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -508,10 +520,10 @@ pub fn rlc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(old_val>>7 == 1);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rcc_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rcc_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -522,10 +534,10 @@ pub fn rcc_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c(old_val & 1 == 1);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rl_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -539,10 +551,10 @@ pub fn rl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_carry);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn rr_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn rr_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -556,10 +568,10 @@ pub fn rr_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_carry);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn sla_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn sla_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -572,10 +584,10 @@ pub fn sla_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_carry);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn sra_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn sra_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -589,10 +601,10 @@ pub fn sra_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_carry);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn swap_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn swap_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -606,10 +618,10 @@ pub fn swap_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(false);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn srl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn srl_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = get_type_a_reg(cpu, opcode);
 
@@ -622,12 +634,12 @@ pub fn srl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_c(new_carry);
     put_type_a_reg(cpu, opcode, new_val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
 macro_rules! _bit {
     ($name:ident, $bit:expr) => {
-        pub fn $name(cpu: &mut Cpu) -> Result<(), ()> {
+        pub fn $name(cpu: &mut Cpu) -> InstructionRetType {
             let opcode = cpu.get_opcode();
             let test_val = get_type_a_reg(cpu, opcode);
 
@@ -636,7 +648,7 @@ macro_rules! _bit {
             cpu.regs.put_flag_n(false);
             cpu.regs.put_flag_h(true);
 
-            Ok(())
+            Ok(NoBranch)
         }
     };
 }
@@ -652,13 +664,13 @@ _bit!(bit7_instr, 7);
 
 macro_rules! _res {
     ($name:ident, $bit:expr) => {
-        pub fn $name(cpu: &mut Cpu) -> Result<(), ()> {
+        pub fn $name(cpu: &mut Cpu) -> InstructionRetType {
             let opcode = cpu.get_opcode();
             let old_val = get_type_a_reg(cpu, opcode);
 
             put_type_a_reg(cpu, opcode, old_val & !(1<<$bit));
 
-            Ok(())
+            Ok(NoBranch)
         }
     };
 }
@@ -674,13 +686,13 @@ _res!(res7_instr, 7);
 
 macro_rules! _set {
     ($name:ident, $bit:expr) => {
-        pub fn $name(cpu: &mut Cpu) -> Result<(), ()> {
+        pub fn $name(cpu: &mut Cpu) -> InstructionRetType {
             let opcode = cpu.get_opcode();
             let old_val = get_type_a_reg(cpu, opcode);
 
             put_type_a_reg(cpu, opcode, old_val | (1<<$bit));
 
-            Ok(())
+            Ok(NoBranch)
         }
     };
 }
@@ -697,7 +709,7 @@ _set!(set7_instr, 7);
 
 /************* Load instructions *****************/
 
-pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     cpu.incr_pc();
     let imm_val = cpu.get_opcode();
@@ -715,10 +727,10 @@ pub fn ld_u8_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
         0x3e => cpu.regs.put_a(imm_val),
         ____ => panic!("Unrecognized ld_u8_imm opcode {}", opcode),
     };
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_u16_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_u16_imm_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     cpu.incr_pc();
@@ -734,10 +746,10 @@ pub fn ld_u16_imm_instr(cpu: &mut Cpu) -> Result<(), ()> {
         0x31 => cpu.regs.put_sp(imm_val),
         ____ => panic!("Unrecognized ld_u16_imm opcode {}", opcode),
     };
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let from_val = get_type_a_reg(cpu, opcode);
     match (opcode>>3) & 0x7 {
@@ -754,10 +766,10 @@ pub fn ld_instr(cpu: &mut Cpu) -> Result<(), ()> {
         7 => cpu.regs.put_a(from_val),
         _ => panic!("Unrecognized ld opcode {}", opcode),
     }
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_from_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_from_mem_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let from_addr = match opcode {
         0x0A => cpu.regs.get_bc(),
@@ -776,10 +788,10 @@ pub fn ld_from_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
     };
     let from_val = cpu.read8(from_addr);
     cpu.regs.put_a(from_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_to_mem_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let to_addr = match opcode {
         0x02 => cpu.regs.get_bc(),
@@ -798,10 +810,10 @@ pub fn ld_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
     };
     let a_val = cpu.regs.get_a();
     cpu.write8(to_addr, a_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_sp_to_imm_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_sp_to_imm_mem_instr(cpu: &mut Cpu) -> InstructionRetType {
     cpu.incr_pc();
     let to_addr_lower = cpu.get_opcode() as u16;
     cpu.incr_pc();
@@ -810,7 +822,7 @@ pub fn ld_sp_to_imm_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let to_addr = (to_addr_upper<<8) | to_addr_lower;
     let value = cpu.regs.get_sp();
     cpu.write16(to_addr, value);
-    Ok(())
+    Ok(NoBranch)
 }
 
 fn ld_specialized_mem_addr(cpu: &mut Cpu, opcode: u8) -> u16 {
@@ -832,28 +844,28 @@ fn ld_specialized_mem_addr(cpu: &mut Cpu, opcode: u8) -> u16 {
     }
 }
 
-pub fn ld_from_mem_to_a_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_from_mem_to_a_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let mem_addr = ld_specialized_mem_addr(cpu, opcode);
     let mem_val = cpu.read8(mem_addr);
     cpu.regs.put_a(mem_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_from_a_to_mem_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_from_a_to_mem_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let mem_addr = ld_specialized_mem_addr(cpu, opcode);
     let a_val = cpu.regs.get_a();
     cpu.write8(mem_addr, a_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ld_hl_to_sp_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_hl_to_sp_instr(cpu: &mut Cpu) -> InstructionRetType {
     let hl_val = cpu.regs.get_hl();
     cpu.regs.put_sp(hl_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
 // XXX: There must be a better way to add signed and unsigned numbers while
@@ -867,18 +879,18 @@ fn u16_plus_i8(val1_u16: u16, val2_i8: i8) -> u16 {
     }
 }
 
-pub fn ld_sp_plus_signed_imm_to_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ld_sp_plus_signed_imm_to_hl_instr(cpu: &mut Cpu) -> InstructionRetType {
     let sp_val = cpu.regs.get_sp();
     cpu.incr_pc();
     let signed_imm = cpu.get_opcode() as i8;
     let new_sp_val = u16_plus_i8(sp_val, signed_imm);
     cpu.regs.put_hl(new_sp_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
 /*********** Control Flow *************/
 
-pub fn jr_imm8_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn jr_imm8_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let orig_pc = cpu.regs.get_pc();
 
@@ -895,15 +907,15 @@ pub fn jr_imm8_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let imm_val = cpu.get_opcode() as i8;
 
     if !should_jump {
-        return Ok(())
+        return Ok(BranchNotTaken)
     }
 
     let new_pc = u16_plus_i8(orig_pc, imm_val);
     cpu.jump(new_pc);
-    Ok(())
+    Ok(BranchTaken)
 }
 
-pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn jp_imm16_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     
     let should_jump = match opcode {
@@ -921,23 +933,23 @@ pub fn jp_imm16_instr(cpu: &mut Cpu) -> Result<(), ()> {
     let upper_imm_val = cpu.get_opcode() as u16;
     
     if !should_jump {
-        return Ok(());
+        return Ok(BranchNotTaken);
     }
 
     let new_pc = (upper_imm_val<<8) | lower_imm_val;
     cpu.jump(new_pc);
-    Ok(())
+    Ok(BranchTaken)
 }
 
-pub fn jp_hl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn jp_hl_instr(cpu: &mut Cpu) -> InstructionRetType {
     let addr = cpu.regs.get_hl();
     let jump_addr = cpu.read16(addr);
 
     cpu.jump(jump_addr);
-    Ok(())
+    Ok(BranchNotTaken)
 }
 
-pub fn restart_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn restart_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let restart_addr = match opcode {
@@ -953,10 +965,10 @@ pub fn restart_instr(cpu: &mut Cpu) -> Result<(), ()> {
     } as u16;
 
     cpu.jump(restart_addr);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn call_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn call_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let should_call = match opcode {
@@ -969,7 +981,7 @@ pub fn call_instr(cpu: &mut Cpu) -> Result<(), ()> {
     };
 
     if !should_call {
-        return Ok(())
+        return Ok(BranchNotTaken)
     }
 
     let pc = cpu.regs.get_pc();
@@ -979,10 +991,10 @@ pub fn call_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
     cpu.jump(jump_addr);
 
-    Ok(())
+    Ok(BranchTaken)
 }
 
-pub fn ret_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ret_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let should_return = match opcode {
@@ -999,19 +1011,19 @@ pub fn ret_instr(cpu: &mut Cpu) -> Result<(), ()> {
     };
 
     if !should_return {
-        return Ok(())
+        return Ok(BranchNotTaken)
     }
 
     let ret_addr = cpu.pop_u16();
 
     cpu.jump(ret_addr);
 
-    Ok(())
+    Ok(BranchTaken)
 }
 
 /*********** Special code ********************/
 
-pub fn push_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn push_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let val = match opcode {
@@ -1024,10 +1036,10 @@ pub fn push_instr(cpu: &mut Cpu) -> Result<(), ()> {
 
     cpu.push_u16(val);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn pop_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn pop_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
 
     let val = cpu.pop_u16();
@@ -1040,10 +1052,10 @@ pub fn pop_instr(cpu: &mut Cpu) -> Result<(), ()> {
         ____ => panic!("Unrecognized pop instruction {}", opcode),
     };
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn daa_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn daa_instr(cpu: &mut Cpu) -> InstructionRetType {
     let a_val = cpu.regs.get_a();
     let mut new_a_val = a_val % 10;
     let upper_a_val = a_val / 10;
@@ -1051,10 +1063,10 @@ pub fn daa_instr(cpu: &mut Cpu) -> Result<(), ()> {
     new_a_val |= (upper_a_val % 10)<<4;
     println!("{} {} {}", a_val, new_a_val, upper_a_val);
     cpu.regs.put_a(new_a_val);
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn cpl_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn cpl_instr(cpu: &mut Cpu) -> InstructionRetType {
     let a_val = cpu.regs.get_a();
     let new_a_val = !a_val;
 
@@ -1062,28 +1074,28 @@ pub fn cpl_instr(cpu: &mut Cpu) -> Result<(), ()> {
     cpu.regs.put_flag_n(true);
     cpu.regs.put_flag_h(true);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn scf_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn scf_instr(cpu: &mut Cpu) -> InstructionRetType {
     cpu.regs.put_flag_n(false);
     cpu.regs.put_flag_h(false);
     cpu.regs.put_flag_c(true);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn ccf_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn ccf_instr(cpu: &mut Cpu) -> InstructionRetType {
     let old_c_flag = cpu.regs.get_flag_c();
 
     cpu.regs.put_flag_c(!old_c_flag);
     cpu.regs.put_flag_n(false);
     cpu.regs.put_flag_h(false);
 
-    Ok(())
+    Ok(NoBranch)
 }
 
-pub fn cb_instr(cpu: &mut Cpu) -> Result<(), ()> {
+pub fn cb_instr(cpu: &mut Cpu) -> InstructionRetType {
     // Get next instruction
     cpu.incr_pc();
     let result = (CB_INSTR[cpu.get_opcode() as usize].func)(cpu);

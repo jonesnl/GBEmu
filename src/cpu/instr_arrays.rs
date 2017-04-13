@@ -1,10 +1,10 @@
-use cpu::*;
+use super::*;
 
 pub const INSTR_ARRAY_SIZE: usize = 256;
 
 pub struct Instruction {
     pub opcode: u8,
-    pub func: fn(&mut Cpu) -> Result<(), ()>,
+    pub func: fn(&mut Cpu) -> InstructionRetType,
     pub cycles: u8,
 }
 

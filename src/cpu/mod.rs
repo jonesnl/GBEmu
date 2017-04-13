@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 mod instr_arrays;
-mod power;
 
 use registers::Registers;
 use hw::memory::{Bus, BusWidth, Memory};
@@ -21,7 +20,6 @@ use self::BranchResult::*;
 pub struct Cpu {
     regs: Registers,
     memory: Memory,
-    power_state: PowerState,
 }
 
 impl Cpu {

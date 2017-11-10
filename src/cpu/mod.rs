@@ -1102,7 +1102,7 @@ pub fn cb_instr(cpu: &mut Cpu) -> InstructionRetType {
 
 /*********** Tests ************/
 
-#[test]
+#[allow(unused_macros)]
 macro_rules! setup_test {
     ( $( $x:expr ),* ) => {
         {

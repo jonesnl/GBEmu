@@ -29,11 +29,14 @@ fn main() {
     let context = glutin::ContextBuilder::new();
     let display = glium::Display::new(window, context, &events_loop).unwrap();
 
-    let image = image::load(Cursor::new(&include_bytes!("./opengl.png")[..]),
-                            image::PNG).unwrap().to_rgba();
-    let image_dimensions = image.dimensions();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
+    let v = vec![0x00, 0x00, 0xFF, 0x00,
+                 0x00, 0xFF, 0x00, 0x00,
+                 0xFF, 0x00, 0x00, 0x00,
+                 0xFF, 0xFF, 0xFF, 0x00u8,
+                 ];
+    let image = glium::texture::RawImage2d::from_raw_rgba(v, (2, 2));
     let texture = glium::texture::Texture2d::new(&display, image).unwrap();
+    let mag_texture = texture.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest);
 
     #[derive(Copy, Clone)]
     struct Vertex {
@@ -81,7 +84,7 @@ fn main() {
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
         let uniforms = uniform! {
-            tex: &texture,
+            tex: mag_texture,
         };
 
         target.draw(&vertex_buffer, &indices, &program, &uniforms,

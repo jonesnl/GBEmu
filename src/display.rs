@@ -55,7 +55,7 @@ pub fn draw(display: &glium::Display,
     let vertex1 = Vertex { position: [ -1.0, -1.0 ], tex_coords: [0.0, 0.0] };
     let vertex2 = Vertex { position: [ -1.0,  1.0 ], tex_coords: [0.0, 1.0] };
     let vertex3 = Vertex { position: [  1.0, -1.0 ], tex_coords: [1.0, 0.0] };
-	let vertex4 = Vertex { position: [  1.0,  1.0 ], tex_coords: [1.0, 1.0] };
+    let vertex4 = Vertex { position: [  1.0,  1.0 ], tex_coords: [1.0, 1.0] };
     let shape = vec![vertex1, vertex2, vertex3, vertex4];
 
     let vertex_buffer = glium::VertexBuffer::new(display, &shape).unwrap();

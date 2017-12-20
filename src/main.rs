@@ -36,7 +36,7 @@ fn main() {
                      0xFF, 0x00, 0x00, 0x00,
                      0xFF, 0xFF, 0xFF, 0x00u8,
                      ];
-        display::draw(&mut display, &program, v);
+        display::draw(&mut display, &program, v, (2, 2));
         events_loop.poll_events(|event| {
             match event {
                 glutin::Event::WindowEvent { event, .. } => match event {

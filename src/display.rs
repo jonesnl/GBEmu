@@ -39,10 +39,13 @@ pub fn create_program(display: &glium::Display) -> glium::Program {
 
 pub fn draw(display: &glium::Display,
             program: &glium::Program,
-            image_vec: Vec<u8>) {
-    let image = glium::texture::RawImage2d::from_raw_rgba(image_vec, (2, 2));
+            image_vec: Vec<u8>,
+            dimensions: (u32, u32)) {
+    let image = glium::texture::RawImage2d::from_raw_rgba(image_vec, dimensions);
     let texture = glium::texture::Texture2d::new(display, image).unwrap();
-    let mag_texture = texture.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest);
+    let mag_texture = texture.sampled()
+                          .magnify_filter(
+                              glium::uniforms::MagnifySamplerFilter::Nearest);
 
     #[derive(Copy, Clone)]
     struct Vertex {

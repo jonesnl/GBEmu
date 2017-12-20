@@ -380,7 +380,7 @@ fn u8_inc_dec_put_val(cpu: &mut Cpu, opcode: u8, new_val: u8) {
     };
 }
 
-fn set_inc_dec_result_flags(cpu: &mut Cpu, old_val: u8, new_val: u8) {
+fn set_inc_dec_result_flags(cpu: &mut Cpu, _old_val: u8, new_val: u8) {
     cpu.regs.put_flag_z(new_val == 0);
     // XXX Fix half carry computation
     cpu.regs.put_flag_h((new_val>>4) & 1 == 1);

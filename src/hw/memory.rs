@@ -1,3 +1,5 @@
+use hw::io::IO;
+
 pub type BusWidth = u16;
 
 pub trait Bus {
@@ -27,6 +29,7 @@ pub struct Memory {
     oam: Vec<u8>,
     hram: Vec<u8>,
     cartridge: Box<Bus>,
+    io: IO,
 }
 
 impl Memory {
@@ -35,8 +38,9 @@ impl Memory {
             vram: vec![0u8; 8 * 1024],
             wram: vec![0u8; 8 * 1024],
             oam: vec![0u8; 100],
-            hram: vec![0u8; 0x7E],
+            hram: vec![0u8; 0x7F],
             cartridge: cartridge,
+            io: IO::new(),
         }
     }
 }
@@ -66,7 +70,7 @@ impl Bus for Memory {
                 panic!("Unusable memory address {}", addr);
             },
             0xFF00...0xFF7F => {
-                // TODO I/O
+                self.io.write8(addr, data);
             },
             0xFF80...0xFFFE => {
                 self.hram[(addr-0xFF80) as usize] = data;
@@ -104,8 +108,7 @@ impl Bus for Memory {
                 panic!("Unusable memory address {}", addr);
             },
             0xFF00...0xFF7F => {
-                // TODO I/O
-                0
+                self.io.read8(addr)
             },
             0xFF80...0xFFFE => {
                 self.hram[(addr-0xFF80) as usize]

@@ -2,8 +2,8 @@
 
 mod instr_arrays;
 
-use registers::Registers;
-use hw::memory::{Bus, BusWidth, Memory};
+use crate::registers::Registers;
+use crate::hw::memory::{Bus, BusWidth, Memory};
 
 use self::instr_arrays::*;
 
@@ -18,8 +18,8 @@ pub enum BranchResult {
 use self::BranchResult::*;
 
 pub struct Cpu {
-    regs: Registers,
-    memory: Memory,
+    pub regs: Registers,
+    pub memory: Memory,
 }
 
 impl Cpu {
@@ -67,6 +67,18 @@ impl Cpu {
     pub fn jump(&mut self, addr: u16) {
         self.regs.put_pc(addr.wrapping_sub(1));
     }
+
+    pub fn execute_instr(&mut self) -> InstructionRetType {
+        // Get instruction (XXX expand)
+        // Look up instruction in instruction table
+        // Execute instruction
+        let opcode = self.get_opcode();
+        println!("Instr: {:02x}", opcode);
+        let result = (INSTR[opcode as usize].func)(self);
+        // wait
+        self.incr_pc();
+        result
+    }
 }
 
 impl Bus for Cpu {
@@ -85,16 +97,6 @@ impl Bus for Cpu {
     fn read16(&self, addr: BusWidth) -> u16 {
         self.memory.read16(addr)
     }
-}
-
-pub fn execute_instruction(cpu: &mut Cpu) -> InstructionRetType {
-    // Get instruction (XXX expand)
-    // Look up instruction in instruction table
-    // Execute instruction
-    let result = (INSTR[cpu.get_opcode() as usize].func)(cpu);
-    // wait
-    cpu.incr_pc();
-    result
 }
 
 pub fn noop_instr(_: &mut Cpu) -> InstructionRetType {
@@ -118,7 +120,9 @@ pub fn ei_instr(_: &mut Cpu) -> InstructionRetType {
 
 // TODO
 pub fn di_instr(_: &mut Cpu) -> InstructionRetType {
-    Err(())
+    println!("Unimplimented instruction DI!");
+    // Err(())
+    Ok(NoBranch)
 }
 
 // TODO
@@ -330,7 +334,7 @@ pub fn cp_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let arg_val = type_a_reg_or_imm(cpu, opcode, 0xfe) as u16;
     let a_val = cpu.regs.get_a() as u16;
-    let new_val = a_val - arg_val;
+    let new_val = a_val.wrapping_sub(arg_val);
 
     set_result_flags(cpu, new_val);
     cpu.regs.put_flag_n(true);
@@ -402,7 +406,7 @@ pub fn inc_u8_instr(cpu: &mut Cpu) -> InstructionRetType {
 pub fn dec_u8_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
     let old_val = u8_inc_dec_get_val(cpu, opcode);
-    let new_val = old_val - 1;
+    let new_val = old_val.wrapping_sub(1);
 
     set_inc_dec_result_flags(cpu, old_val, new_val);
     cpu.regs.put_flag_n(true);
@@ -1106,14 +1110,14 @@ pub fn cb_instr(cpu: &mut Cpu) -> InstructionRetType {
 macro_rules! setup_test {
     ( $( $x:expr ),* ) => {
         {
-            use hw::controller::MBC1;
-            let mut rom = Vec::<u8>::new();
+            use crate::hw::controller::MBC1;
+            let mut rom = vec![0u8;0x100];
             $(
                 rom.push($x);
             )*
             rom.push(0xFD);
             rom.resize(0xFFFF, 0x00);
-            let new_cartridge: Box<Bus> = MBC1::new(rom);
+            let new_cartridge: Box<dyn Bus> = MBC1::new(rom);
             let new_memory = Memory::new(new_cartridge);
             Cpu::new(new_memory)
         }
@@ -1127,11 +1131,11 @@ fn five_noops() {
     ];
 
     loop {
-        if execute_instruction(&mut cpu).is_err() {
+        if cpu.execute_instr().is_err() {
             break;
         }
     }
-    assert_eq!(cpu.regs.get_pc(), 6);
+    assert_eq!(cpu.regs.get_pc(), 0x106);
 }
 
 #[test]
@@ -1142,7 +1146,7 @@ fn add() {
     cpu.regs.put_a(1);
 
     loop {
-        if execute_instruction(&mut cpu).is_err() {
+        if cpu.execute_instr().is_err() {
             break;
         }
     }
@@ -1156,7 +1160,7 @@ fn sub() {
     ];
     cpu.regs.put_a(1);
     loop {
-        if execute_instruction(&mut cpu).is_err() {
+        if cpu.execute_instr().is_err() {
             break;
         }
     }
@@ -1169,7 +1173,7 @@ fn ld_imm() {
         0x3e, 0x10, 0x06, 0x20
     ];
     loop {
-        if execute_instruction(&mut cpu).is_err() {
+        if cpu.execute_instr().is_err() {
             break;
         }
     }
@@ -1183,7 +1187,7 @@ fn ld() {
         0x3e, 0xff, 0x47, 0x48
     ];
     loop {
-        if execute_instruction(&mut cpu).is_err() {
+        if cpu.execute_instr().is_err() {
             break;
         }
     }
@@ -1199,7 +1203,7 @@ fn daa() {
         0x3e, 0x10, 0x27
     ];
     loop {
-        if execute_instruction(&mut cpu).is_err() {
+        if cpu.execute_instr().is_err() {
             break;
         }
     }

@@ -1,4 +1,4 @@
-use hw::memory::{BusWidth, Bus};
+use crate::hw::memory::{BusWidth, Bus};
 
 pub struct MBC1 {
     rom: Vec<u8>,
@@ -11,7 +11,7 @@ pub struct MBC1 {
 }
 
 impl MBC1 {
-    pub fn new(rom: Vec<u8>) -> Box<Bus> {
+    pub fn new(rom: Vec<u8>) -> Box<dyn Bus> {
         let ramsize = match rom[0x149] {
             0x0 => 0,
             0x1 => 2048,
@@ -36,27 +36,27 @@ impl MBC1 {
 impl Bus for MBC1 {
     fn write8(&mut self, addr: BusWidth, data: u8) {
         match addr {
-            0x0...0x1FFF => {
+            0x0..=0x1FFF => {
                 if data & 0xF == 0xA {
                     self.ram_enable = true;
                 } else {
                     self.ram_enable = false;
                 }
             },
-            0x2000...0x3FFF => {
+            0x2000..=0x3FFF => {
                 if data == 0x0 {
                     self.rom_bank_num = 0x1;
                 } else {
                     self.rom_bank_num = data;
                 }
             },
-            0x4000...0x5FFF => {
+            0x4000..=0x5FFF => {
                 self.ram_bank_num = data;
             },
-            0x6000...0x7FFF => {
+            0x6000..=0x7FFF => {
                 self.mode_select = data;
             },
-            0xA000...0xBFFF => {
+            0xA000..=0xBFFF => {
                 let translated_addr = if self.mode_select == 0 {
                     (self.ram_bank_num as u16) << 10 & addr - 0xA000
                 } else {
@@ -71,17 +71,17 @@ impl Bus for MBC1 {
 
     fn read8(&self, addr: BusWidth) -> u8 {
         match addr {
-            0x0...0x3FFF => {
+            0x0..=0x3FFF => {
                 self.rom[addr as usize]
             },
-            0x4000...0x7FFF => {
+            0x4000..=0x7FFF => {
                 let bank_num = match self.mode_select {
                     0 => ((self.ram_bank_num as u16) << 5) | (self.rom_bank_num as u16),
                     _ => self.rom_bank_num as u16,
                 };
                 self.rom[((addr-0x4000) + 0x4000 * bank_num) as usize]
             },
-            0xA000...0xBFFF => {
+            0xA000..=0xBFFF => {
                 self.ram[((addr-0xA000) + 0x2000 * self.ram_bank_num as u16) as usize]
             },
             _ => panic!("Illegal read from {}", addr),

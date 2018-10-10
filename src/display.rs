@@ -1,5 +1,5 @@
 use glium;
-use glium::{glutin, Surface};
+use glium::{glutin, Surface, implement_vertex, uniform};
 
 pub fn init_display(events_loop: &mut glutin::EventsLoop) -> glium::Display {
     let window = glutin::WindowBuilder::new();

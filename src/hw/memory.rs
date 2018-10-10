@@ -1,4 +1,4 @@
-use hw::io::IO;
+use crate::hw::io::IO;
 
 pub type BusWidth = u16;
 
@@ -7,9 +7,13 @@ pub trait Bus {
 
     fn read8(&self, addr: BusWidth) -> u8;
     
-    fn write16(&mut self, addr: BusWidth, data: u16);
+    fn write16(&mut self, addr: BusWidth, data: u16) {
+        self._write16_using_write8(addr, data);
+    }
 
-    fn read16(&self, addr: BusWidth) -> u16;
+    fn read16(&self, addr: BusWidth) -> u16 {
+        self._read16_using_read8(addr)
+    }
 
     fn _write16_using_write8(&mut self, addr: BusWidth, data: u16) {
         self.write8(addr+1, (data >> 8) as u8);
@@ -24,18 +28,16 @@ pub trait Bus {
 }
 
 pub struct Memory {
-    vram: Vec<u8>,
     wram: Vec<u8>,
     oam: Vec<u8>,
     hram: Vec<u8>,
-    cartridge: Box<Bus>,
-    io: IO,
+    pub cartridge: Box<dyn Bus>,
+    pub io: IO,
 }
 
 impl Memory {
-    pub fn new(cartridge: Box<Bus>) -> Memory {
+    pub fn new(cartridge: Box<dyn Bus>) -> Memory {
         Memory {
-            vram: vec![0u8; 8 * 1024],
             wram: vec![0u8; 8 * 1024],
             oam: vec![0u8; 100],
             hram: vec![0u8; 0x7F],
@@ -48,31 +50,31 @@ impl Memory {
 impl Bus for Memory {
     fn write8(&mut self, addr: BusWidth, data: u8) {
         match addr {
-            0x0000...0x7FFF => {
+            0x0000..=0x7FFF => {
                 (*self.cartridge).write8(addr, data);
             },
-            0x8000...0x9FFF => {
-                self.vram[(addr-0x8000) as usize] = data;
-            },
-            0xA000...0xBFFF => {
-                (*self.cartridge).write8(addr, data);
-            },
-            0xC000...0xDFFF => {
-                self.wram[(addr-0xC000) as usize] = data;
-            },
-            0xE000...0xFDFF => {
-                self.wram[(addr-0xE000) as usize] = data;
-            },
-            0xFE00...0xFE9F => {
-                self.oam[(addr-0xFE00) as usize] = data;
-            },
-            0xFEA0...0xFEFF => {
-                panic!("Unusable memory address {}", addr);
-            },
-            0xFF00...0xFF7F => {
+            0x8000..=0x9FFF => {
                 self.io.write8(addr, data);
             },
-            0xFF80...0xFFFE => {
+            0xA000..=0xBFFF => {
+                (*self.cartridge).write8(addr, data);
+            },
+            0xC000..=0xDFFF => {
+                self.wram[(addr-0xC000) as usize] = data;
+            },
+            0xE000..=0xFDFF => {
+                self.wram[(addr-0xE000) as usize] = data;
+            },
+            0xFE00..=0xFE9F => {
+                self.oam[(addr-0xFE00) as usize] = data;
+            },
+            0xFEA0..=0xFEFF => {
+                println!("Unusable memory address {:04x}", addr);
+            },
+            0xFF00..=0xFF7F => {
+                self.io.write8(addr, data);
+            },
+            0xFF80..=0xFFFE => {
                 self.hram[(addr-0xFF80) as usize] = data;
             },
             0xFFFF => {
@@ -86,31 +88,31 @@ impl Bus for Memory {
 
     fn read8(&self, addr: BusWidth) -> u8 {
         match addr {
-            0x000...0x7FFF => {
+            0x000..=0x7FFF => {
                 (*self.cartridge).read8(addr)
             },
-            0x8000...0x9FFF => {
-                self.vram[(addr-0x8000) as usize]
-            },
-            0xA000...0xBFFF => {
-                (*self.cartridge).read8(addr)
-            },
-            0xC000...0xDFFF => {
-                self.wram[(addr-0xC000) as usize]
-            },
-            0xE000...0xFDFF => {
-                self.wram[(addr-0xE000) as usize]
-            },
-            0xFE00...0xFE9F => {
-                self.oam[(addr-0xFE00) as usize]
-            },
-            0xFEA0...0xFEFF => {
-                panic!("Unusable memory address {}", addr);
-            },
-            0xFF00...0xFF7F => {
+            0x8000..=0x9FFF => {
                 self.io.read8(addr)
             },
-            0xFF80...0xFFFE => {
+            0xA000..=0xBFFF => {
+                (*self.cartridge).read8(addr)
+            },
+            0xC000..=0xDFFF => {
+                self.wram[(addr-0xC000) as usize]
+            },
+            0xE000..=0xFDFF => {
+                self.wram[(addr-0xE000) as usize]
+            },
+            0xFE00..=0xFE9F => {
+                self.oam[(addr-0xFE00) as usize]
+            },
+            0xFEA0..=0xFEFF => {
+                panic!("Unusable memory address {:04x}", addr);
+            },
+            0xFF00..=0xFF7F => {
+                self.io.read8(addr)
+            },
+            0xFF80..=0xFFFE => {
                 self.hram[(addr-0xFF80) as usize]
             },
             0xFFFF => {

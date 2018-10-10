@@ -2,7 +2,9 @@
 name = "GBEmu"
 version = "0.1.0"
 authors = ["Nate Jones <jonesnl@umich.edu>"]
+edition = "2018"
 
 [dependencies]
 glium = "*"
 image = "*"
+rgb = "0.8.11"

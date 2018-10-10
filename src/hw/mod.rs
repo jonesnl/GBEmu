@@ -1,3 +1,4 @@
 pub mod controller;
 pub mod memory;
 mod io;
+mod lcd;

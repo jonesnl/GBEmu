@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+#[derive(Debug)]
 pub struct Registers {
     af: u16,
     bc: u16,
@@ -61,7 +62,7 @@ impl Registers {
             de: 0,
             hl: 0,
             sp: 0,
-            pc: 0,
+            pc: 0x100,
         }
     }
 

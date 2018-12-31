@@ -31,6 +31,7 @@ pub enum LcdControllerMode {
 // TODO should vram be put in here?
 pub struct LCD {
     vram: Vec<u8>,
+    oam: Vec<u8>,
     lcdram: Vec<u8>,
     pub lcd_display: Vec<RGBA8>,
 }
@@ -40,6 +41,9 @@ impl Bus for LCD {
         match addr {
             0x8000..=0x9FFF => {
                 self.vram[(addr-0x8000) as usize] = data;
+            },
+            0xFE00..=0xFE9F => {
+                self.oam[(addr-0xFE00) as usize] = data;
             },
             0xFF46 => panic!("Should not have DMA addr in LCD"),
             0xFF40..=0xFF4B => {
@@ -54,6 +58,9 @@ impl Bus for LCD {
             0x8000..=0x9FFF => {
                 self.vram[(addr-0x8000) as usize]
             },
+            0xFE00..=0xFE9F => {
+                self.oam[(addr-0xFE00) as usize]
+            },
             0xFF46 => panic!("Should not have DMA addr in LCD"),
             0xFF40..=0xFF4B => {
                 self.lcdram[(addr as usize) - 0xFF40]
@@ -67,6 +74,7 @@ impl LCD {
     pub fn new() -> LCD {
         LCD {
             vram: vec![0u8; 8 * 1024],
+            oam: vec![0u8; 100],
             lcdram: vec![0u8; 0xC], // FF40 - FF4B
             lcd_display: vec![RGBA8{r:0, g:0, b:0, a: 0}; 160 * 144],
         }

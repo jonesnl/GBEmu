@@ -29,7 +29,6 @@ pub trait Bus {
 
 pub struct Memory {
     wram: Vec<u8>,
-    oam: Vec<u8>,
     hram: Vec<u8>,
     pub cartridge: Box<dyn Bus>,
     pub io: IO,
@@ -39,10 +38,16 @@ impl Memory {
     pub fn new(cartridge: Box<dyn Bus>) -> Memory {
         Memory {
             wram: vec![0u8; 8 * 1024],
-            oam: vec![0u8; 100],
             hram: vec![0u8; 0x7F],
             cartridge: cartridge,
             io: IO::new(),
+        }
+    }
+
+    fn dma_func(&mut self, data: u8) {
+        let addr = (data as u16) << 8;
+        for i in 0..0xa0 {
+            self.write8(0xfe00 + i, self.read8(addr + i));
         }
     }
 }
@@ -65,8 +70,9 @@ impl Bus for Memory {
             0xE000..=0xFDFF => {
                 self.wram[(addr-0xE000) as usize] = data;
             },
+            0xFF46 => self.dma_func(data),
             0xFE00..=0xFE9F => {
-                self.oam[(addr-0xFE00) as usize] = data;
+                self.io.write8(addr, data);
             },
             0xFEA0..=0xFEFF => {
                 println!("Unusable memory address {:04x}", addr);
@@ -103,8 +109,9 @@ impl Bus for Memory {
             0xE000..=0xFDFF => {
                 self.wram[(addr-0xE000) as usize]
             },
+            0xFF46 => 0,
             0xFE00..=0xFE9F => {
-                self.oam[(addr-0xFE00) as usize]
+                self.io.read8(addr)
             },
             0xFEA0..=0xFEFF => {
                 panic!("Unusable memory address {:04x}", addr);

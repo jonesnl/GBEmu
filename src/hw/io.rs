@@ -17,8 +17,6 @@ impl IO {
     // TODO joypad
 
     // TODO sound
-
-    // TODO dma control
 }
 
 impl Bus for IO {
@@ -27,7 +25,7 @@ impl Bus for IO {
             0x8000..=0x9FFF => {
                 self.lcd.write8(addr, data);
             },
-            0xFF40..=0xFF45 | 0xFF47..=0xFF4B => {
+            0xFF40..=0xFF4B => {
                 self.lcd.write8(addr, data);
             },
             0xFF00..=0xFF7F => {
@@ -44,7 +42,7 @@ impl Bus for IO {
             0x8000..=0x9FFF => {
                 self.lcd.read8(addr)
             },
-            0xFF40..=0xFF45 | 0xFF47..=0xFF4B => {
+            0xFF40..=0xFF4B => {
                 self.lcd.read8(addr)
             },
             0xFF00..=0xFF7F => {

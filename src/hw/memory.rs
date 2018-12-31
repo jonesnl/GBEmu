@@ -23,7 +23,7 @@ pub trait Bus {
     fn _read16_using_read8(&self, addr: BusWidth) -> u16 {
         let lower_byte = self.read8(addr) as u16;
         let upper_byte = self.read8(addr + 1) as u16;
-        (upper_byte << 8) & lower_byte
+        (upper_byte << 8) | lower_byte
     }
 }
 

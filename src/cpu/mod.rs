@@ -37,7 +37,7 @@ impl Cpu {
 
     pub fn incr_pc(&mut self) {
         let pc = self.regs.get_pc();
-        self.regs.put_pc(pc+1);
+        self.regs.put_pc(pc.wrapping_add(1));
     }
 
     pub fn push_u8(&mut self, val: u8) {
@@ -115,7 +115,9 @@ pub fn halt_instr(_: &mut Cpu) -> InstructionRetType {
 
 // TODO
 pub fn ei_instr(_: &mut Cpu) -> InstructionRetType {
-    Err(())
+    println!("Unimplimented instruction EI!");
+    // Err(())
+    Ok(NoBranch)
 }
 
 // TODO

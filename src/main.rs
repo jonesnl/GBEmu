@@ -16,6 +16,8 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::fs::File;
 
+use std::{thread, time};
+
 use std::io::Cursor;
 
 use rgb::ComponentBytes;
@@ -86,12 +88,21 @@ fn main() {
                 _ => return,
             }
         });
+
+        /*
         if keypress == KeyPress::Released {
             println!("0x{:04x?}", cpu.regs);
             cpu.execute_instr().unwrap();
             cpu.memory.io.lcd.tick_update();
             keypress = KeyPress::Empty;
         }
+        */
+
+        println!("0x{:04x?}", cpu.regs);
+        cpu.execute_instr().unwrap();
+        cpu.memory.io.lcd.tick_update();
+        thread::sleep(time::Duration::from_millis(10));
+
         let lcd_vec = cpu.memory.io.lcd.lcd_display.as_bytes().to_vec();
         display::draw(&mut display, &program, lcd_vec, (160, 144));
     }

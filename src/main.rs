@@ -59,28 +59,23 @@ fn main() {
     let mut closed = false;
 
     #[derive(PartialEq)]
-    enum KeyPress {
-        Empty,
-        Pressed,
-        Released,
+    enum EmuState {
+        Running,
+        Step,
+        Paused,
     }
     
-    let mut keypress = KeyPress::Empty;
+    let mut emu_state = EmuState::Paused;
     while !closed {
-        let _v = vec![0x00, 0x00, 0xFF, 0x00,
-                     0x00, 0xFF, 0x00, 0x00,
-                     0xFF, 0x00, 0x00, 0x00,
-                     0xFF, 0xFF, 0xFF, 0x00u8,
-                     ];
         events_loop.poll_events(|event| {
             match event {
                 glutin::Event::WindowEvent { event, .. } => match event {
                     glutin::WindowEvent::CloseRequested => closed = true,
                     glutin::WindowEvent::KeyboardInput {input, ..} => {
                         match (input.scancode, input.state) {
-                            (0x39, glutin::ElementState::Pressed) => keypress = KeyPress::Pressed,
-                            (0x39, glutin::ElementState::Released) => keypress = KeyPress::Released,
-                            _ => keypress = KeyPress::Empty,
+                            (0x39, glutin::ElementState::Pressed) => emu_state = EmuState::Step,
+                            (0x1C, glutin::ElementState::Pressed) => emu_state = EmuState::Running,
+                            _ => (),
                         }
                     },
                     _ => return,
@@ -89,14 +84,9 @@ fn main() {
             }
         });
 
-        /*
-        if keypress == KeyPress::Released {
-            println!("0x{:04x?}", cpu.regs);
-            cpu.execute_instr().unwrap();
-            cpu.memory.io.lcd.tick_update();
-            keypress = KeyPress::Empty;
+        if emu_state == EmuState::Paused {
+            continue;
         }
-        */
 
         println!("0x{:04x?}", cpu.regs);
         cpu.execute_instr().unwrap();
@@ -105,39 +95,9 @@ fn main() {
 
         let lcd_vec = cpu.memory.io.lcd.lcd_display.as_bytes().to_vec();
         display::draw(&mut display, &program, lcd_vec, (160, 144));
-    }
 
-    /*
-    if std::env::args().len() != 2 {
-        println!("Argument count is not 2!");
-        std::process::exit(1);
-    }
-
-    let filename = env::args().nth(1).unwrap();
-
-    let path = Path::new(&filename);
-
-    let mut file = File::open(&path).unwrap();
-
-    let mut rom = Vec::new();
-    
-    match file.read_to_end(&mut rom) {
-        Ok(_) => (),
-        Err(m) => {
-            println!("Error loading game: {}", m);
-            return;
+        if emu_state == EmuState::Step {
+            emu_state = EmuState::Paused;
         }
     }
-    // From this point on the rom should never be modified
-    let rom = rom;
-
-    let new_cartridge: Box<Bus> = MBC1::new(rom);
-    let new_memory = Memory::new(new_cartridge);
-    let cpu = Cpu::new(new_memory);
-
-    for x in 0x100..0x130 {
-        if (x % 0x10) == 0 {println!("");}
-        print!("{:0>2x} ", cpu.read8(x));
-    }
-    */
 }

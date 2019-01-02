@@ -143,7 +143,7 @@ impl LCD {
             let bg_map_y = scy.wrapping_add(curline);
             let bg_point = Point{x: bg_map_x, y: bg_map_y};
             let pixel = self.get_bg_pixel(bg_point);
-            let rgb = RGBA8{r: pixel * 100, g: pixel * 100, b: pixel * 100, a: 0};
+            let rgb = RGBA8{r: pixel * 100, g: pixel * 100, b: pixel * 100, a: 255};
             let lcd_point = Point{x, y: curline};
             self.set_lcd_pixel(lcd_point, rgb);
         }

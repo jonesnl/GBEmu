@@ -88,12 +88,14 @@ fn main() {
             continue;
         }
 
-        println!("{:04x?}", cpu.regs);
-        println!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
-                 cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
+        if emu_state == EmuState::Step {
+            println!("{:04x?}", cpu.regs);
+            println!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
+                     cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
+        }
         cpu.execute_instr().unwrap();
         cpu.memory.io.lcd.tick_update();
-        thread::sleep(time::Duration::from_millis(10));
+        // thread::sleep(time::Duration::from_micros(10));
 
         let lcd_vec = cpu.memory.io.lcd.lcd_display.as_bytes().to_vec();
         display::draw(&mut display, &program, lcd_vec, (160, 144));
@@ -101,6 +103,8 @@ fn main() {
         if emu_state == EmuState::Step {
             emu_state = EmuState::Paused;
         }
-        println!("");
+        if emu_state == EmuState::Step {
+            println!("");
+        }
     }
 }

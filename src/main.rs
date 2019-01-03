@@ -88,7 +88,9 @@ fn main() {
             continue;
         }
 
-        println!("0x{:04x?}", cpu.regs);
+        println!("{:04x?}", cpu.regs);
+        println!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
+                 cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
         cpu.execute_instr().unwrap();
         cpu.memory.io.lcd.tick_update();
         thread::sleep(time::Duration::from_millis(10));
@@ -99,5 +101,6 @@ fn main() {
         if emu_state == EmuState::Step {
             emu_state = EmuState::Paused;
         }
+        println!("");
     }
 }

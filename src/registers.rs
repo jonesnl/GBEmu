@@ -57,11 +57,11 @@ use self::WhichByte::*;
 impl Registers {
     pub fn new() -> Registers {
         Registers {
-            af: 0,
-            bc: 0,
-            de: 0,
-            hl: 0,
-            sp: 0,
+            af: 0x01B0,
+            bc: 0x13,
+            de: 0xd8,
+            hl: 0x14d,
+            sp: 0xfffe,
             pc: 0x100,
         }
     }
@@ -77,19 +77,19 @@ impl Registers {
     _reg_get!(get_l, hl, Lower);
 
     pub fn get_flag_z(&self) -> bool {
-        (self.get_f() >> 7) == 1
+        (self.get_f() >> 7) & 1 == 1
     }
 
     pub fn get_flag_n(&self) -> bool {
-        (self.get_f() >> 6) == 1
+        (self.get_f() >> 6) & 1 == 1
     }
 
     pub fn get_flag_h(&self) -> bool {
-        (self.get_f() >> 5) == 1
+        (self.get_f() >> 5) & 1 == 1
     }
 
     pub fn get_flag_c(&self) -> bool {
-        (self.get_f() >> 4) == 1
+        (self.get_f() >> 4) & 1 == 1
     }
 
     _reg_put!(put_a, af, Upper);
@@ -105,7 +105,7 @@ impl Registers {
         let flags = self.get_f();
         let cleared_flags = flags & 0b0111_1111;
         assert_eq!(0x1 & (cleared_flags >> 7), 0);
-        let set_flags = flags | ((val as u8) << 7);
+        let set_flags = cleared_flags | ((val as u8) << 7);
         self.put_f(set_flags);
     }
 
@@ -113,7 +113,7 @@ impl Registers {
         let flags = self.get_f();
         let cleared_flags = flags & 0b1011_1111;
         assert_eq!(0x1 & (cleared_flags >> 6), 0);
-        let set_flags = flags | ((val as u8) << 6);
+        let set_flags = cleared_flags | ((val as u8) << 6);
         self.put_f(set_flags);
     }
 
@@ -121,7 +121,7 @@ impl Registers {
         let flags = self.get_f();
         let cleared_flags = flags & 0b1101_1111;
         assert_eq!(0x1 & (cleared_flags >> 5), 0);
-        let set_flags = flags | ((val as u8) << 5);
+        let set_flags = cleared_flags | ((val as u8) << 5);
         self.put_f(set_flags);
     }
 
@@ -129,7 +129,7 @@ impl Registers {
         let flags = self.get_f();
         let cleared_flags = flags & 0b1110_1111;
         assert_eq!(0x1 & (cleared_flags >> 4), 0);
-        let set_flags = flags | ((val as u8) << 4);
+        let set_flags = cleared_flags | ((val as u8) << 4);
         self.put_f(set_flags);
     }
 
@@ -153,6 +153,7 @@ impl Registers {
 #[test]
 fn basic_reg_test() {
     let mut regs = Registers::new();
+    regs.put_af(0x0);
     regs.put_a(0x1);
     assert_eq!(regs.get_a(), 0x1);
     assert_eq!(regs.get_f(), 0x00);
@@ -167,4 +168,42 @@ fn basic_reg_test() {
     regs.put_f(0x30);
     assert_eq!(regs.get_a(), 0x20);
     assert_eq!(regs.get_f(), 0x30);
+}
+
+#[test]
+fn flag_test() {
+    let mut regs = Registers::new();
+    regs.put_af(0);
+
+    regs.put_flag_z(true);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0x80);
+
+    regs.put_flag_n(true);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0xC0);
+
+    regs.put_flag_h(true);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0xE0);
+
+    regs.put_flag_c(true);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0xF0);
+
+    regs.put_flag_c(false);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0xE0);
+
+    regs.put_flag_h(false);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0xC0);
+
+    regs.put_flag_n(false);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0x80);
+
+    regs.put_flag_z(false);
+    assert_eq!(regs.get_a(), 0x0);
+    assert_eq!(regs.get_f(), 0x0);
 }

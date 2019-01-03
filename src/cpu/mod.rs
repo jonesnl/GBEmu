@@ -914,7 +914,7 @@ pub fn jr_imm8_instr(cpu: &mut Cpu) -> InstructionRetType {
         return Ok(BranchNotTaken)
     }
 
-    let new_pc = u16_plus_i8(orig_pc, imm_val);
+    let new_pc = u16_plus_i8(orig_pc.wrapping_add(2), imm_val);
     cpu.jump(new_pc);
     Ok(BranchTaken)
 }

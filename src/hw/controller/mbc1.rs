@@ -44,6 +44,7 @@ impl Bus for MBC1 {
                 }
             },
             0x2000..=0x3FFF => {
+                println!("Setting MBC ram bank num to {}", data);
                 if data == 0x0 {
                     self.rom_bank_num = 0x1;
                 } else {
@@ -51,6 +52,7 @@ impl Bus for MBC1 {
                 }
             },
             0x4000..=0x5FFF => {
+                println!("Setting MBC ram bank num to {}", data);
                 self.ram_bank_num = data;
             },
             0x6000..=0x7FFF => {

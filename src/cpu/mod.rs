@@ -73,7 +73,7 @@ impl Cpu {
         // Look up instruction in instruction table
         // Execute instruction
         let opcode = self.get_opcode();
-        //println!("Instr: {:02x}", opcode);
+        log::info!("Instr: {:02x}", opcode);
         let result = (INSTR[opcode as usize].func)(self);
         // wait
         self.incr_pc();

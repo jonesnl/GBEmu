@@ -22,7 +22,17 @@ use std::io::Cursor;
 
 use rgb::ComponentBytes;
 
+fn init_logging() {
+    use env_logger::Builder;
+    use log::LevelFilter;
+    let mut builder = Builder::new();
+    builder.filter_module("GBEmu", LevelFilter::Info);
+    builder.default_format_timestamp(false);
+    builder.init();
+}
+
 fn main() {
+    init_logging();
     use glium::{glutin, Surface};
 
     let mut events_loop = glutin::EventsLoop::new();
@@ -89,9 +99,9 @@ fn main() {
         }
 
         if emu_state == EmuState::Step {
-            println!("{:04x?}", cpu.regs);
-            println!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
-                     cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
+            log::info!("{:04x?}", cpu.regs);
+            log::info!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
+                       cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
         }
         cpu.execute_instr().unwrap();
         cpu.memory.io.lcd.tick_update();

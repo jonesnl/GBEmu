@@ -7,48 +7,81 @@ mod registers;
 mod display;
 
 use std::env;
+use std::path::{Path, PathBuf};
+use std::io::prelude::*;
+use std::fs::File;
+use std::cell::RefCell;
+
 use crate::hw::controller::MBC1;
 use crate::hw::memory::Bus;
 use crate::hw::memory::Memory;
 use crate::cpu::Cpu;
-
-use std::path::Path;
-use std::io::prelude::*;
-use std::fs::File;
 
 use std::{thread, time};
 
 use std::io::Cursor;
 
 use rgb::ComponentBytes;
+use structopt::StructOpt;
 
-fn init_logging() {
-    use env_logger::Builder;
-    use log::LevelFilter;
-    let mut builder = Builder::new();
-    builder.filter_module("GBEmu", LevelFilter::Info);
-    builder.default_format_timestamp(false);
-    builder.init();
+// log_stderr for per instruction register prints?
+
+thread_local!{
+    static VERBOSE: RefCell<bool> = RefCell::new(false);
+}
+
+#[macro_export]
+macro_rules! emu_log {
+    () => ({
+        use crate::VERBOSE;
+        VERBOSE.with(|f| {
+            if *f.borrow() == true {
+                println!();
+            }
+        });
+    });
+    ($($arg:tt)*) => ({
+        use crate::VERBOSE;
+        VERBOSE.with(|f| {
+            if *f.borrow() == true {
+                println!($($arg)*);
+            }
+        });
+    })
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "basic")]
+struct EmuOpts {
+    /// Activate verbose mode
+    #[structopt(short = "v")]
+    verbose: bool,
+
+    #[structopt(parse(from_os_str))]
+    rom_path: PathBuf,
+}
+
+fn set_verbose() {
+    VERBOSE.with(|f| {
+        *f.borrow_mut() = true;
+    });
 }
 
 fn main() {
-    init_logging();
     use glium::{glutin, Surface};
+
+    let opts = EmuOpts::from_args();
+    let path = &opts.rom_path;
+
+    if opts.verbose {
+        set_verbose();
+    }
 
     let mut events_loop = glutin::EventsLoop::new();
     let mut display = display::init_display(&mut events_loop);
     let program = display::create_program(&mut display);
 
-    if std::env::args().len() != 2 {
-        println!("Argument count is not 2!");
-        std::process::exit(1);
-    }
-
-    let filename = env::args().nth(1).unwrap();
-
-    let path = Path::new(&filename);
-
-    let mut file = File::open(&path).unwrap();
+    let mut file = File::open(path).unwrap();
 
     let mut rom = Vec::new();
     
@@ -99,8 +132,8 @@ fn main() {
         }
 
         if emu_state == EmuState::Step {
-            log::info!("{:04x?}", cpu.regs);
-            log::info!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
+            emu_log!("{:04x?}", cpu.regs);
+            emu_log!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
                        cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
         }
         cpu.execute_instr().unwrap();
@@ -114,7 +147,7 @@ fn main() {
             emu_state = EmuState::Paused;
         }
         if emu_state == EmuState::Step {
-            println!("");
+            emu_log!("");
         }
     }
 }

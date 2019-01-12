@@ -2,6 +2,7 @@
 
 mod instr_arrays;
 
+use crate::emu_log;
 use crate::registers::Registers;
 use crate::hw::memory::{Bus, BusWidth, Memory};
 
@@ -73,7 +74,7 @@ impl Cpu {
         // Look up instruction in instruction table
         // Execute instruction
         let opcode = self.get_opcode();
-        log::info!("Instr: {:02x}", opcode);
+        emu_log!("Instr: {:02x}", opcode);
         let result = (INSTR[opcode as usize].func)(self);
         // wait
         self.incr_pc();

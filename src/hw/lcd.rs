@@ -1,5 +1,11 @@
+use crate::emu_log;
 use crate::hw::memory::{Bus, BusWidth};
 use rgb::RGBA8;
+
+const OAM_TICKS: u16 = 80;
+const OAM_AND_VRAM_TICKS: u16 = 172;
+const HBLANK_TICKS: u16 = 204;
+const VBLANK_TICKS: u16 = 4560;
 
 pub struct Point {
     x: u8,
@@ -21,11 +27,12 @@ pub enum CoincidenceFlag {
     NoCoincidence,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LcdControllerMode {
-    HorizontalBlankingImpulse,
-    VerticalBlankingImpulse,
-    LcdControllerOamAccess,
-    LcdControllerOamAndVramAccess,
+    OamAccess(u16),
+    OamAndVramAccess(u16),
+    HorizontalBlank(u16),
+    VerticalBlank(u16),
 }
 
 // TODO should vram be put in here?
@@ -34,6 +41,7 @@ pub struct LCD {
     oam: Vec<u8>,
     lcdram: Vec<u8>,
     pub lcd_display: Vec<RGBA8>,
+    pub drawing_state: LcdControllerMode,
 }
 
 impl Bus for LCD {
@@ -46,6 +54,7 @@ impl Bus for LCD {
                 self.oam[(addr-0xFE00) as usize] = data;
             },
             0xFF46 => panic!("Should not have DMA addr in LCD"),
+            0xFF41 => println!("Writing to LCDSTAT not currently supported!"),
             0xFF40..=0xFF4B => {
                 self.lcdram[(addr as usize) - 0xFF40] = data
             },
@@ -62,6 +71,9 @@ impl Bus for LCD {
                 self.oam[(addr-0xFE00) as usize]
             },
             0xFF46 => panic!("Should not have DMA addr in LCD"),
+            0xFF41 => {
+                self.lcdstat()
+            },
             0xFF40..=0xFF4B => {
                 self.lcdram[(addr as usize) - 0xFF40]
             },
@@ -77,13 +89,49 @@ impl LCD {
             oam: vec![0u8; 100],
             lcdram: vec![0u8; 0xC], // FF40 - FF4B
             lcd_display: vec![RGBA8{r:0, g:0, b:0, a: 0}; 160 * 144],
+            drawing_state: LcdControllerMode::OamAccess(0),
         }
     }
 
     pub fn tick_update(&mut self) {
-        self.update_bg_map();
-        self.lcdram[0x4] += 1;
-        self.lcdram[0x4] %= 144;
+        use self::LcdControllerMode::*;
+        self.drawing_state = match self.drawing_state {
+            OamAccess(cnt) => {
+                if cnt >= OAM_TICKS {
+                    OamAndVramAccess(0)
+                } else {
+                    OamAccess(cnt + 1)
+                }
+            },
+            OamAndVramAccess(cnt) => {
+                if cnt >= OAM_AND_VRAM_TICKS {
+                    if self.curline() == 144 {
+                        VerticalBlank(0)
+                    } else {
+                        self.update_bg_map();
+                        HorizontalBlank(0)
+                    }
+                } else {
+                    OamAndVramAccess(cnt + 1)
+                }
+            },
+            HorizontalBlank(cnt) => {
+                if cnt >= HBLANK_TICKS {
+                    *self.curline_mut() += 1;
+                    OamAccess(0)
+                } else {
+                    HorizontalBlank(cnt + 1)
+                }
+            },
+            VerticalBlank(cnt) => {
+                if cnt >= VBLANK_TICKS {
+                    *self.curline_mut() = 0;
+                    OamAccess(0)
+                } else {
+                    VerticalBlank(cnt + 1)
+                }
+            },
+        };
     }
 
     fn set_lcd_pixel(&mut self, point: Point, rgb: RGBA8) {
@@ -213,7 +261,14 @@ impl LCD {
 
     // LCDSTAT register accessors
     pub fn lcdstat(&self) -> u8 {
-        self.lcdram[0x1]
+        // TODO add interrupt and coincidence flag to result
+        use self::LcdControllerMode::*;
+        match self.drawing_state {
+            OamAccess(_) => 2,
+            OamAndVramAccess(_) => 3,
+            HorizontalBlank(_) => 0,
+            VerticalBlank(_) => 1,
+        }
     }
 
     pub fn scanline_coincidence_interrupt(&self) -> bool {
@@ -241,17 +296,6 @@ impl LCD {
         }
     }
 
-    pub fn lcd_controller_mode(&self) -> LcdControllerMode {
-        let bits = self.lcdstat() & 0b11;
-        match bits {
-            0b00 => LcdControllerMode::HorizontalBlankingImpulse,
-            0b01 => LcdControllerMode::VerticalBlankingImpulse,
-            0b10 => LcdControllerMode::LcdControllerOamAccess,
-            0b11 => LcdControllerMode::LcdControllerOamAndVramAccess,
-            ____ => panic!("lcd_controller_mode {}", bits),
-        }
-    }
-
     pub fn scrolly(&self) -> u8 {
         self.lcdram[0x2]
     }
@@ -262,6 +306,10 @@ impl LCD {
 
     pub fn curline(&self) -> u8 {
         self.lcdram[0x4]
+    }
+
+    pub fn curline_mut(&mut self) -> &mut u8 {
+        &mut self.lcdram[0x4]
     }
 
     pub fn cmpline(&self) -> u8 {

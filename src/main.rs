@@ -16,6 +16,7 @@ use crate::hw::controller::MBC1;
 use crate::hw::memory::Bus;
 use crate::hw::memory::Memory;
 use crate::cpu::Cpu;
+use crate::hw::lcd::LcdControllerMode;
 
 use std::{thread, time};
 
@@ -109,6 +110,7 @@ fn main() {
     }
     
     let mut emu_state = EmuState::Paused;
+    let mut i = 0u64;
     while !closed {
         events_loop.poll_events(|event| {
             match event {
@@ -132,6 +134,7 @@ fn main() {
         }
 
         if emu_state == EmuState::Step {
+            emu_log!("Instr number: {}", i);
             emu_log!("{:04x?}", cpu.regs);
             emu_log!("Flags: z: {}, c: {}, h: {}, n: {}", cpu.regs.get_flag_z(),
                        cpu.regs.get_flag_c(), cpu.regs.get_flag_h(), cpu.regs.get_flag_n());
@@ -140,8 +143,10 @@ fn main() {
         cpu.memory.io.lcd.tick_update();
         // thread::sleep(time::Duration::from_micros(10));
 
-        let lcd_vec = cpu.memory.io.lcd.lcd_display.as_bytes().to_vec();
-        display::draw(&mut display, &program, lcd_vec, (160, 144));
+        if cpu.memory.io.lcd.drawing_state == LcdControllerMode::VerticalBlank(4560) {
+            let lcd_vec = cpu.memory.io.lcd.lcd_display.as_bytes().to_vec();
+            display::draw(&mut display, &program, lcd_vec, (160, 144));
+        }
 
         if emu_state == EmuState::Step {
             emu_state = EmuState::Paused;
@@ -149,5 +154,6 @@ fn main() {
         if emu_state == EmuState::Step {
             emu_log!("");
         }
+        i += 1;
     }
 }

@@ -86,7 +86,7 @@ impl LCD {
     pub fn new() -> LCD {
         LCD {
             vram: vec![0u8; 8 * 1024],
-            oam: vec![0u8; 100],
+            oam: vec![0u8; 0x100],
             lcdram: vec![0u8; 0xC], // FF40 - FF4B
             lcd_display: vec![RGBA8{r:0, g:0, b:0, a: 0}; 160 * 144],
             drawing_state: LcdControllerMode::OamAccess(0),
@@ -169,7 +169,8 @@ impl LCD {
             0x9000 => {
                 let tt_addr = bg_tt_addr + tile_row * 32 + tile_col;
                 let tt_entry = self.read8(tt_addr) as i8;
-                let tile_base_addr = tpt_addr + (tt_entry as u16) * 16;
+                let tile_base_addr = (tpt_addr as i32) + (tt_entry as i32) * 16;
+                let tile_base_addr = tile_base_addr as u16;
                 pixel_from_tile(
                     tile_base_addr, (pixel_col, pixel_row))
             },

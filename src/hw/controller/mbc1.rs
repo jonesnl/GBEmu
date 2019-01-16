@@ -65,7 +65,10 @@ impl Bus for MBC1 {
                     addr - 0xA000
                 } as usize;
 
-                self.ram[translated_addr] = data;
+                match self.ram.get_mut(translated_addr) {
+                    Some(ptr) => *ptr = data,
+                    _ => (),
+                }
             },
             _ => panic!("Illegal write to {}", addr),
         };
@@ -84,7 +87,8 @@ impl Bus for MBC1 {
                 self.rom[((addr-0x4000) + 0x4000 * bank_num) as usize]
             },
             0xA000..=0xBFFF => {
-                self.ram[((addr-0xA000) + 0x2000 * self.ram_bank_num as u16) as usize]
+                let ram_idx = ((addr-0xA000) + 0x2000 * self.ram_bank_num as u16) as usize;
+                self.ram.get(ram_idx).cloned().unwrap_or(0)
             },
             _ => panic!("Illegal read from {}", addr),
         }

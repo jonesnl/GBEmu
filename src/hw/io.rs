@@ -25,6 +25,9 @@ impl Bus for IO {
             0x8000..=0x9FFF => {
                 self.lcd.write8(addr, data);
             },
+            0xFE00..=0xFE9F => {
+                self.lcd.write8(addr, data);
+            },
             0xFF40..=0xFF4B => {
                 self.lcd.write8(addr, data);
             },
@@ -32,7 +35,7 @@ impl Bus for IO {
                 self.ioram[(addr - 0xFF00) as usize] = data;
             },
             _ => {
-                panic!("Unknown command");
+                panic!("Unknown address: {}", addr);
             },
         }
     }
@@ -42,6 +45,9 @@ impl Bus for IO {
             0x8000..=0x9FFF => {
                 self.lcd.read8(addr)
             },
+            0xFE00..=0xFE9F => {
+                self.lcd.read8(addr)
+            },
             0xFF40..=0xFF4B => {
                 self.lcd.read8(addr)
             },
@@ -49,9 +55,8 @@ impl Bus for IO {
                 self.ioram[(addr - 0xFF00) as usize]
             },
             _ => {
-                self.ioram[addr as usize]
+                panic!("Unknown address: {}", addr);
             },
-
         }
     }
 }

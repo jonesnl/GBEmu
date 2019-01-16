@@ -114,7 +114,8 @@ impl Bus for Memory {
                 self.io.read8(addr)
             },
             0xFEA0..=0xFEFF => {
-                panic!("Unusable memory address {:04x}", addr);
+                // Unusable memory address, actually a mirror of other memory
+                0
             },
             0xFF00..=0xFF7F => {
                 self.io.read8(addr)

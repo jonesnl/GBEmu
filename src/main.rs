@@ -25,6 +25,9 @@ use std::io::Cursor;
 use rgb::ComponentBytes;
 use structopt::StructOpt;
 
+use glium::{glutin, Surface};
+use glium::glutin::{ElementState, VirtualKeyCode};
+
 // log_stderr for per instruction register prints?
 
 thread_local!{
@@ -68,9 +71,18 @@ fn set_verbose() {
     });
 }
 
-fn main() {
-    use glium::{glutin, Surface};
+fn dump_memory(cpu: &Cpu) {
+    let mut line_output = Vec::<String>::new();
+    for i in (0..=0xfff0).step_by(0x10) {
+        print!("{:04x}: ", i);
+        (0..=0xf).map(|x| format!("{:02x}", cpu.read8(i + x)))
+                 .for_each(|s| line_output.push(s));
+        println!("{}", line_output.join(" "));
+        line_output.clear();
+    }
+}
 
+fn main() {
     let opts = EmuOpts::from_args();
     let path = &opts.rom_path;
 
@@ -85,7 +97,7 @@ fn main() {
     let mut file = File::open(path).unwrap();
 
     let mut rom = Vec::new();
-    
+
     match file.read_to_end(&mut rom) {
         Ok(_) => (),
         Err(m) => {
@@ -108,7 +120,7 @@ fn main() {
         Step,
         Paused,
     }
-    
+
     let mut emu_state = EmuState::Paused;
     let mut i = 0u64;
     while !closed {
@@ -117,9 +129,13 @@ fn main() {
                 glutin::Event::WindowEvent { event, .. } => match event {
                     glutin::WindowEvent::CloseRequested => closed = true,
                     glutin::WindowEvent::KeyboardInput {input, ..} => {
-                        match (input.scancode, input.state) {
-                            (0x39, glutin::ElementState::Pressed) => emu_state = EmuState::Step,
-                            (0x1C, glutin::ElementState::Pressed) => emu_state = EmuState::Running,
+                        match (input.virtual_keycode, input.state) {
+                            (Some(VirtualKeyCode::Space), ElementState::Pressed) =>
+                                emu_state = EmuState::Step,
+                            (Some(VirtualKeyCode::Return), ElementState::Pressed) =>
+                                emu_state = EmuState::Running,
+                            (Some(VirtualKeyCode::D), ElementState::Pressed) =>
+                                dump_memory(&cpu),
                             _ => (),
                         }
                     },

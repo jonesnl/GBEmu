@@ -1,10 +1,10 @@
-use crate::emu_log;
 use crate::hw::memory::{Bus, BusWidth};
 use rgb::RGBA8;
 
 const OAM_TICKS: u16 = 80;
 const OAM_AND_VRAM_TICKS: u16 = 172;
 const HBLANK_TICKS: u16 = 204;
+const FULL_LINE_TICKS: u16 = OAM_TICKS + OAM_AND_VRAM_TICKS + HBLANK_TICKS;
 const VBLANK_TICKS: u16 = 4560;
 
 pub struct Point {
@@ -128,7 +128,11 @@ impl LCD {
                     *self.curline_mut() = 0;
                     OamAccess(0)
                 } else {
-                    VerticalBlank(cnt + 1)
+                    let new_cnt = cnt + 1;
+                    if new_cnt % FULL_LINE_TICKS == 0 {
+                        *self.curline_mut() += 1;
+                    }
+                    VerticalBlank(new_cnt)
                 }
             },
         };

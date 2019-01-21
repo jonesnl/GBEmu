@@ -74,7 +74,7 @@ impl Cpu {
         // Look up instruction in instruction table
         // Execute instruction
         let opcode = self.get_opcode();
-        emu_log!("Instr: {:02x}", opcode);
+        emu_log!("PC: {:02x}, Instr: {:02x}", self.regs.get_pc(), opcode);
         let result = (INSTR[opcode as usize].func)(self);
         // wait
         self.incr_pc();

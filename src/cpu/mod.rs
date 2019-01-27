@@ -44,23 +44,23 @@ impl Cpu {
     pub fn push_u8(&mut self, val: u8) {
         let sp = self.regs.get_sp();
         self.write8(sp, val);
-        self.regs.put_sp(sp.wrapping_add(1));
+        self.regs.put_sp(sp.wrapping_sub(1));
     }
 
     pub fn push_u16(&mut self, val: u16) {
         let sp = self.regs.get_sp();
         self.write16(sp, val);
-        self.regs.put_sp(sp.wrapping_add(2));
+        self.regs.put_sp(sp.wrapping_sub(2));
     }
 
     pub fn pop_u8(&mut self) -> u8 {
-        let new_sp = self.regs.get_sp().wrapping_sub(1);
+        let new_sp = self.regs.get_sp().wrapping_add(1);
         self.regs.put_sp(new_sp);
         self.read8(new_sp)
     }
 
     pub fn pop_u16(&mut self) -> u16 {
-        let new_sp = self.regs.get_sp().wrapping_sub(2);
+        let new_sp = self.regs.get_sp().wrapping_add(2);
         self.regs.put_sp(new_sp);
         self.read16(new_sp)
     }

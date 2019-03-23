@@ -22,6 +22,16 @@ pub struct Cpu {
     pub regs: Registers,
     pub memory: Memory,
     pub global_interrupt_flag: bool,
+    pub interrupt_enable_reg: u8,
+    pub interrupt_flag_reg: u8,
+}
+
+enum InterruptType {
+    VBlank = 0x1,
+    LCDC = 0x2,
+    Timer = 0x4,
+    SerialTransferDone = 0x8,
+    PinFallingEdge = 0x10,
 }
 
 impl Cpu {
@@ -30,7 +40,17 @@ impl Cpu {
             regs: Registers::new(),
             memory: memory,
             global_interrupt_flag: false,
+            interrupt_enable_reg: 0,
+            interrupt_flag_reg: 0,
         }
+    }
+
+    fn is_interrupt_enabled(&self, interrupt_type: InterruptType) -> bool {
+        self.interrupt_enable_reg & (interrupt_type as u8) == 1
+    }
+
+    fn is_interrupt_triggered(&self, interrupt_type: InterruptType) -> bool {
+        self.interrupt_flag_reg & (interrupt_type as u8) == 1
     }
 
     pub fn get_opcode(&self) -> u8 {
@@ -71,6 +91,27 @@ impl Cpu {
         self.regs.put_pc(addr.wrapping_sub(1));
     }
 
+    fn poll_interrupts(&mut self) {
+        if self.memory.io.lcd.vblank_interrupt_should_trigger() {
+            self.interrupt_flag_reg |= InterruptType::VBlank as u8;
+        }
+    }
+
+    fn check_and_run_interrupts(&mut self) {
+        if self.global_interrupt_flag == false {
+            return;
+        }
+
+        if self.is_interrupt_enabled(InterruptType::VBlank)
+            && self.is_interrupt_triggered(InterruptType::VBlank)
+        {
+            self.push_u16(self.regs.get_pc());
+            self.regs.put_pc(0x0040);
+            self.interrupt_flag_reg &= !(InterruptType::VBlank as u8);
+            return;
+        }
+    }
+
     pub fn execute_instr(&mut self) -> InstructionRetType {
         // Get instruction (XXX expand)
         // Look up instruction in instruction table
@@ -80,25 +121,33 @@ impl Cpu {
         let result = (INSTR[opcode as usize].func)(self);
         // wait
         self.incr_pc();
+        self.poll_interrupts();
+        self.check_and_run_interrupts();
         result
     }
 }
 
 impl Bus for Cpu {
     fn write8(&mut self, addr: BusWidth, data: u8) {
-        self.memory.write8(addr, data);
+        match addr {
+            0xFFFF => self.interrupt_enable_reg = 0x1F & data,
+            ______ => self.memory.write8(addr, data),
+        };
     }
 
     fn read8(&self, addr: BusWidth) -> u8 {
-        self.memory.read8(addr)
+        match addr {
+            0xFFFF => self.interrupt_enable_reg,
+            ______ => self.memory.read8(addr),
+        }
     }
 
     fn write16(&mut self, addr: BusWidth, data: u16) {
-        self.memory.write16(addr, data);
+        self._write16_using_write8(addr, data);
     }
 
     fn read16(&self, addr: BusWidth) -> u16 {
-        self.memory.read16(addr)
+        self._read16_using_read8(addr)
     }
 }
 
@@ -116,13 +165,11 @@ pub fn halt_instr(_: &mut Cpu) -> InstructionRetType {
     Err(())
 }
 
-// TODO
 pub fn ei_instr(cpu: &mut Cpu) -> InstructionRetType {
     cpu.global_interrupt_flag = true;
     Ok(NoBranch)
 }
 
-// TODO
 pub fn di_instr(cpu: &mut Cpu) -> InstructionRetType {
     cpu.global_interrupt_flag = false;
     Ok(NoBranch)
@@ -1008,7 +1055,7 @@ pub fn ret_instr(cpu: &mut Cpu) -> InstructionRetType {
         0xd0 => !cpu.regs.get_flag_c(),
         0xd8 => cpu.regs.get_flag_c(),
         0xd9 => {
-            // TODO enable interrupts here
+            cpu.global_interrupt_flag = true;
             true
         }
         ____ => panic!("Unrecognized ret opcode {}", opcode),

@@ -48,35 +48,25 @@ impl Bus for LCD {
     fn write8(&mut self, addr: BusWidth, data: u8) {
         match addr {
             0x8000..=0x9FFF => {
-                self.vram[(addr-0x8000) as usize] = data;
-            },
+                self.vram[(addr - 0x8000) as usize] = data;
+            }
             0xFE00..=0xFE9F => {
-                self.oam[(addr-0xFE00) as usize] = data;
-            },
+                self.oam[(addr - 0xFE00) as usize] = data;
+            }
             0xFF46 => panic!("Should not have DMA addr in LCD"),
             0xFF41 => println!("Writing to LCDSTAT not currently supported!"),
-            0xFF40..=0xFF4B => {
-                self.lcdram[(addr as usize) - 0xFF40] = data
-            },
+            0xFF40..=0xFF4B => self.lcdram[(addr as usize) - 0xFF40] = data,
             _ => panic!("Illegal write address {} for LCD", addr),
         }
     }
 
     fn read8(&self, addr: BusWidth) -> u8 {
         match addr {
-            0x8000..=0x9FFF => {
-                self.vram[(addr-0x8000) as usize]
-            },
-            0xFE00..=0xFE9F => {
-                self.oam[(addr-0xFE00) as usize]
-            },
+            0x8000..=0x9FFF => self.vram[(addr - 0x8000) as usize],
+            0xFE00..=0xFE9F => self.oam[(addr - 0xFE00) as usize],
             0xFF46 => panic!("Should not have DMA addr in LCD"),
-            0xFF41 => {
-                self.lcdstat()
-            },
-            0xFF40..=0xFF4B => {
-                self.lcdram[(addr as usize) - 0xFF40]
-            },
+            0xFF41 => self.lcdstat(),
+            0xFF40..=0xFF4B => self.lcdram[(addr as usize) - 0xFF40],
             _ => panic!("Illegal read address {} for LCD", addr),
         }
     }
@@ -88,7 +78,15 @@ impl LCD {
             vram: vec![0u8; 8 * 1024],
             oam: vec![0u8; 0x100],
             lcdram: vec![0u8; 0xC], // FF40 - FF4B
-            lcd_display: vec![RGBA8{r:0, g:0, b:0, a: 0}; 160 * 144],
+            lcd_display: vec![
+                RGBA8 {
+                    r: 0,
+                    g: 0,
+                    b: 0,
+                    a: 0
+                };
+                160 * 144
+            ],
             drawing_state: LcdControllerMode::OamAccess(0),
         }
     }
@@ -102,7 +100,7 @@ impl LCD {
                 } else {
                     OamAccess(cnt + 1)
                 }
-            },
+            }
             OamAndVramAccess(cnt) => {
                 if cnt >= OAM_AND_VRAM_TICKS {
                     if self.curline() == 144 {
@@ -114,7 +112,7 @@ impl LCD {
                 } else {
                     OamAndVramAccess(cnt + 1)
                 }
-            },
+            }
             HorizontalBlank(cnt) => {
                 if cnt >= HBLANK_TICKS {
                     *self.curline_mut() += 1;
@@ -122,7 +120,7 @@ impl LCD {
                 } else {
                     HorizontalBlank(cnt + 1)
                 }
-            },
+            }
             VerticalBlank(cnt) => {
                 if cnt >= VBLANK_TICKS {
                     *self.curline_mut() = 0;
@@ -134,8 +132,12 @@ impl LCD {
                     }
                     VerticalBlank(new_cnt)
                 }
-            },
+            }
         };
+    }
+
+    pub fn vblank_interrupt_should_trigger(&self) -> bool {
+        self.drawing_state == LcdControllerMode::VerticalBlank(0)
     }
 
     fn set_lcd_pixel(&mut self, point: Point, rgb: RGBA8) {
@@ -155,10 +157,10 @@ impl LCD {
         let pixel_from_tile = |tile_base_addr, (x, y)| -> u8 {
             let addr = tile_base_addr + (y as BusWidth / 8 * 2);
             let upper_byte = self.read8(addr);
-            let lower_byte = self.read8(addr+1);
-            let upper_result = (upper_byte>>(7-x)) & 1;
-            let lower_result = (lower_byte>>(7-x)) & 1;
-            (upper_result<<1) | (lower_result)
+            let lower_byte = self.read8(addr + 1);
+            let upper_result = (upper_byte >> (7 - x)) & 1;
+            let lower_result = (lower_byte >> (7 - x)) & 1;
+            (upper_result << 1) | (lower_result)
         };
 
         match tpt_addr {
@@ -167,17 +169,15 @@ impl LCD {
                 let tt_entry = self.read8(tt_addr) as i32;
                 let tile_base_addr = tpt_addr as i32 + tt_entry as i32 * 16;
                 let tile_base_addr = tile_base_addr as u16;
-                pixel_from_tile(
-                    tile_base_addr, (pixel_col, pixel_row))
-            },
+                pixel_from_tile(tile_base_addr, (pixel_col, pixel_row))
+            }
             0x9000 => {
                 let tt_addr = bg_tt_addr + tile_row * 32 + tile_col;
                 let tt_entry = self.read8(tt_addr) as i8;
                 let tile_base_addr = (tpt_addr as i32) + (tt_entry as i32) * 16;
                 let tile_base_addr = tile_base_addr as u16;
-                pixel_from_tile(
-                    tile_base_addr, (pixel_col, pixel_row))
-            },
+                pixel_from_tile(tile_base_addr, (pixel_col, pixel_row))
+            }
             _ => panic!("tile_pattern_table {}", tpt_addr),
         }
     }
@@ -194,25 +194,33 @@ impl LCD {
         for x in 0..160 {
             let bg_map_x = scx.wrapping_add(x);
             let bg_map_y = scy.wrapping_add(curline);
-            let bg_point = Point{x: bg_map_x, y: bg_map_y};
+            let bg_point = Point {
+                x: bg_map_x,
+                y: bg_map_y,
+            };
             let pixel = self.get_bg_pixel(bg_point);
-            let rgb = RGBA8{r: pixel * 100, g: pixel * 100, b: pixel * 100, a: 255};
-            let lcd_point = Point{x, y: curline};
+            let rgb = RGBA8 {
+                r: pixel * 100,
+                g: pixel * 100,
+                b: pixel * 100,
+                a: 255,
+            };
+            let lcd_point = Point { x, y: curline };
             self.set_lcd_pixel(lcd_point, rgb);
         }
     }
 
     // LCDCONT register accessors
     pub fn lcdcont(&self) -> u8 {
-        self.lcdram[0x0] 
+        self.lcdram[0x0]
     }
 
     pub fn lcd_operation(&self) -> bool {
-        (self.lcdcont()>>7) & 1 == 1
+        (self.lcdcont() >> 7) & 1 == 1
     }
 
     pub fn window_tile_table_base_addr(&self) -> BusWidth {
-        let bit = (self.lcdcont()>>6) & 1;
+        let bit = (self.lcdcont() >> 6) & 1;
         match bit {
             0 => 0x9800,
             1 => 0x9C00,
@@ -221,11 +229,11 @@ impl LCD {
     }
 
     pub fn window_display(&self) -> bool {
-        (self.lcdcont()>>5) & 1 == 1
+        (self.lcdcont() >> 5) & 1 == 1
     }
 
     pub fn tile_pattern_table_base_addr(&self) -> BusWidth {
-        let bit = (self.lcdcont()>>4) & 1;
+        let bit = (self.lcdcont() >> 4) & 1;
         match bit {
             0 => 0x9000,
             1 => 0x8000,
@@ -234,7 +242,7 @@ impl LCD {
     }
 
     pub fn background_tile_table_base_addr(&self) -> BusWidth {
-        let bit = (self.lcdcont()>>3) & 1;
+        let bit = (self.lcdcont() >> 3) & 1;
         match bit {
             0 => 0x9800,
             1 => 0x9C00,
@@ -243,7 +251,7 @@ impl LCD {
     }
 
     pub fn sprite_size(&self) -> SpriteSize {
-        let bit = (self.lcdcont()>>2) & 1;
+        let bit = (self.lcdcont() >> 2) & 1;
         match bit {
             0 => SpriteSize::SS8x8,
             1 => SpriteSize::SS8x16,
@@ -252,7 +260,7 @@ impl LCD {
     }
 
     pub fn color_0_window_transparency(&self) -> Transparency {
-        let bit = (self.lcdcont()>>1) & 1;
+        let bit = (self.lcdcont() >> 1) & 1;
         match bit {
             0 => Transparency::Transparent,
             1 => Transparency::Solid,
@@ -277,23 +285,23 @@ impl LCD {
     }
 
     pub fn scanline_coincidence_interrupt(&self) -> bool {
-        (self.lcdstat()>>6) & 1 == 1
+        (self.lcdstat() >> 6) & 1 == 1
     }
 
     pub fn controller_mode_10_interrupt(&self) -> bool {
-        (self.lcdstat()>>5) & 1 == 1
+        (self.lcdstat() >> 5) & 1 == 1
     }
 
     pub fn controller_mode_01_interrupt(&self) -> bool {
-        (self.lcdstat()>>4) & 1 == 1
+        (self.lcdstat() >> 4) & 1 == 1
     }
 
     pub fn controller_mode_00_interrupt(&self) -> bool {
-        (self.lcdstat()>>3) & 1 == 1
+        (self.lcdstat() >> 3) & 1 == 1
     }
 
     pub fn scanline_coincidence_flag(&self) -> CoincidenceFlag {
-        let bit = (self.lcdstat()>>2) & 1;
+        let bit = (self.lcdstat() >> 2) & 1;
         match bit {
             0 => CoincidenceFlag::NoCoincidence,
             1 => CoincidenceFlag::Coincidence,

@@ -1,31 +1,30 @@
 #![allow(dead_code)]
 
-mod hw;
 mod cpu;
-mod registers;
-mod display;
 mod debugger;
+mod display;
+mod hw;
+mod registers;
 
-use std::path::{Path, PathBuf};
-use std::io::prelude::*;
-use std::fs::File;
 use std::cell::RefCell;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 
+use crate::cpu::Cpu;
 use crate::hw::controller::MBC1;
+use crate::hw::lcd::LcdControllerMode;
 use crate::hw::memory::Bus;
 use crate::hw::memory::Memory;
-use crate::cpu::Cpu;
-use crate::hw::lcd::LcdControllerMode;
 
 use rgb::ComponentBytes;
 use structopt::StructOpt;
 
 use glium::glutin;
-use glium::glutin::{ElementState, VirtualKeyCode};
 
 // log_stderr for per instruction register prints?
 
-thread_local!{
+thread_local! {
     static VERBOSE: RefCell<bool> = RefCell::new(false);
 }
 
@@ -70,8 +69,9 @@ fn dump_memory(cpu: &Cpu) {
     let mut line_output = Vec::<String>::new();
     for i in (0..=0xfff0).step_by(0x10) {
         print!("{:04x}: ", i);
-        (0..=0xf).map(|x| format!("{:02x}", cpu.read8(i + x)))
-                 .for_each(|s| line_output.push(s));
+        (0..=0xf)
+            .map(|x| format!("{:02x}", cpu.read8(i + x)))
+            .for_each(|s| line_output.push(s));
         println!("{}", line_output.join(" "));
         line_output.clear();
     }
@@ -86,7 +86,7 @@ fn init_cpu(rom_path: &Path) -> Result<Cpu, String> {
         Ok(_) => (),
         Err(m) => {
             println!("Error loading game: {}", m);
-            return Err(format!("Error loading game: {}", m))
+            return Err(format!("Error loading game: {}", m));
         }
     }
     // From this point on the rom should never be modified
@@ -121,14 +121,12 @@ fn main() {
     let mut debugger = debugger::Debugger::new();
 
     while !closed {
-        events_loop.poll_events(|event| {
-            match event {
-                glutin::Event::WindowEvent { event, .. } => match event {
-                    glutin::WindowEvent::CloseRequested => closed = true,
-                    _ => return,
-                },
+        events_loop.poll_events(|event| match event {
+            glutin::Event::WindowEvent { event, .. } => match event {
+                glutin::WindowEvent::CloseRequested => closed = true,
                 _ => return,
-            }
+            },
+            _ => return,
         });
 
         debugger.tick(&mut cpu);
@@ -141,6 +139,5 @@ fn main() {
             let lcd_vec = cpu.memory.io.lcd.lcd_display.as_bytes().to_vec();
             display::draw(&mut display, &program, lcd_vec, (160, 144));
         }
-
     }
 }

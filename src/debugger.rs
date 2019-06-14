@@ -2,7 +2,6 @@ mod error;
 
 use std::collections::{HashMap, HashSet};
 use std::io::{self, prelude::*};
-use std::str::SplitWhitespace;
 
 use itertools::Itertools;
 
@@ -18,53 +17,36 @@ enum DebuggerState {
     Paused,
 }
 
-trait DebugCmd {
-    fn execute_cmd(
-        &self,
-        dbgr: &mut Debugger,
-        cpu: &mut Cpu,
-        arg_iterator: &mut Iterator<Item = &str>,
-    ) -> DebugResult<()>;
+fn next_cmd(
+    _dbgr: &mut Debugger,
+    cpu: &mut Cpu,
+    _arg_iterator: &mut Iterator<Item = &str>,
+) -> DebugResult<()> {
+    emu_log!("{:04x?}", cpu.regs);
+    emu_log!(
+        "Flags: z: {}, c: {}, h: {}, n: {}",
+        cpu.regs.get_flag_z(),
+        cpu.regs.get_flag_c(),
+        cpu.regs.get_flag_h(),
+        cpu.regs.get_flag_n()
+    );
+    Ok(())
 }
 
-struct NextCmd;
-impl DebugCmd for NextCmd {
-    fn execute_cmd(
-        &self,
-        _dbgr: &mut Debugger,
-        cpu: &mut Cpu,
-        _arg_iterator: &mut Iterator<Item = &str>,
-    ) -> DebugResult<()> {
-        emu_log!("{:04x?}", cpu.regs);
-        emu_log!(
-            "Flags: z: {}, c: {}, h: {}, n: {}",
-            cpu.regs.get_flag_z(),
-            cpu.regs.get_flag_c(),
-            cpu.regs.get_flag_h(),
-            cpu.regs.get_flag_n()
-        );
-        Ok(())
-    }
-}
-
-struct RegistersCmd;
-impl DebugCmd for RegistersCmd {
-    fn execute_cmd(
-        &self,
-        _: &mut Debugger,
-        cpu: &mut Cpu,
-        _: &mut Iterator<Item = &str>,
-    ) -> DebugResult<()> {
-        println!("{:04x?}", cpu.regs);
-        println!(
-            "Flags: z: {}, c: {}, h: {}, n: {}",
-            cpu.regs.get_flag_z(),
-            cpu.regs.get_flag_c(),
-            cpu.regs.get_flag_h(),
-            cpu.regs.get_flag_n()
-        );
-        Ok(())
-    }
+fn registers_cmd(
+    _: &mut Debugger,
+    cpu: &mut Cpu,
+    _: &mut Iterator<Item = &str>,
+) -> DebugResult<()> {
+    println!("{:04x?}", cpu.regs);
+    println!(
+        "Flags: z: {}, c: {}, h: {}, n: {}",
+        cpu.regs.get_flag_z(),
+        cpu.regs.get_flag_c(),
+        cpu.regs.get_flag_h(),
+        cpu.regs.get_flag_n()
+    );
+    Ok(())
 }
 
 fn parse_val<S: Into<String>>(string: S) -> DebugResult<BusWidth> {
@@ -77,116 +59,112 @@ fn parse_val<S: Into<String>>(string: S) -> DebugResult<BusWidth> {
     }
 }
 
-struct PrintCmd;
-impl DebugCmd for PrintCmd {
-    fn execute_cmd(
-        &self,
-        _dbgr: &mut Debugger,
-        cpu: &mut Cpu,
-        args: &mut Iterator<Item = &str>,
-    ) -> DebugResult<()> {
-        let start_addr = parse_val(args.next().ok_or(DebugError)?)?;
-        let len = parse_val(args.next().unwrap_or("1"))?;
+fn print_cmd(
+    _dbgr: &mut Debugger,
+    cpu: &mut Cpu,
+    args: &mut Iterator<Item = &str>,
+) -> DebugResult<()> {
+    let start_addr = parse_val(args.next().ok_or(DebugError)?)?;
+    let len = parse_val(args.next().unwrap_or("1"))?;
 
-        let mut line_output = Vec::<String>::new();
-        for chunk_iter in &(start_addr..=start_addr + len).chunks(0x10) {
-            let mut peekable_iter = chunk_iter.peekable();
-            let line_start_addr = peekable_iter.peek().ok_or(DebugError)?;
-            print!("{:04x}: ", line_start_addr);
-            peekable_iter
-                .map(|addr| format!("{:02x}", cpu.read8(addr)))
-                .for_each(|s| line_output.push(s));
-            println!("{}", line_output.join(" "));
-            line_output.clear();
-        }
-        Ok(())
+    let mut line_output = Vec::<String>::new();
+    for chunk_iter in &(start_addr..=start_addr + len).chunks(0x10) {
+        let mut peekable_iter = chunk_iter.peekable();
+        let line_start_addr = peekable_iter.peek().ok_or(DebugError)?;
+        print!("{:04x}: ", line_start_addr);
+        peekable_iter
+            .map(|addr| format!("{:02x}", cpu.read8(addr)))
+            .for_each(|s| line_output.push(s));
+        println!("{}", line_output.join(" "));
+        line_output.clear();
     }
+    Ok(())
 }
 
-struct ContinueCmd;
-impl DebugCmd for ContinueCmd {
-    fn execute_cmd(
-        &self,
-        dbgr: &mut Debugger,
-        _: &mut Cpu,
-        _: &mut Iterator<Item = &str>,
-    ) -> DebugResult<()> {
-        dbgr.state = DebuggerState::Running;
-        Ok(())
-    }
+fn continue_cmd(
+    dbgr: &mut Debugger,
+    _: &mut Cpu,
+    _: &mut Iterator<Item = &str>,
+) -> DebugResult<()> {
+    dbgr.state = DebuggerState::Running;
+    Ok(())
 }
 
-struct BreakCmd;
-impl DebugCmd for BreakCmd {
-    fn execute_cmd(
-        &self,
-        dbgr: &mut Debugger,
-        _: &mut Cpu,
-        args: &mut Iterator<Item = &str>,
-    ) -> DebugResult<()> {
-        let addr = parse_val(args.next().ok_or(DebugError)?)?;
+fn break_cmd(
+    dbgr: &mut Debugger,
+    _: &mut Cpu,
+    args: &mut Iterator<Item = &str>,
+) -> DebugResult<()> {
+    let addr = parse_val(args.next().ok_or(DebugError)?)?;
 
-        dbgr.breakpoints.insert(addr);
-        println!("Added breakpoint to 0x{:04x}", addr);
-        Ok(())
-    }
+    dbgr.breakpoints.insert(addr);
+    println!("Added breakpoint to 0x{:04x}", addr);
+    Ok(())
 }
 
 struct Cmd {
     command: &'static str,
-    func: &'static DebugCmd,
+    func: fn(&mut Debugger, &mut Cpu, &mut Iterator<Item = &str>) -> DebugResult<()>,
     goto_next_cmd: bool,
+}
+
+enum Cmds {
+    NextCmd,
+    PrintCmd,
+    ContinueCmd,
+    BreakCmd,
+    RegistersCmd,
 }
 
 const CMD_LIST: &'static [Cmd] = &[
     Cmd {
         command: "n",
-        func: &NextCmd,
+        func: next_cmd,
         goto_next_cmd: true,
     },
     Cmd {
         command: "next",
-        func: &NextCmd,
+        func: next_cmd,
         goto_next_cmd: true,
     },
     Cmd {
         command: "p",
-        func: &PrintCmd,
+        func: print_cmd,
         goto_next_cmd: false,
     },
     Cmd {
         command: "print",
-        func: &PrintCmd,
+        func: print_cmd,
         goto_next_cmd: false,
     },
     Cmd {
         command: "c",
-        func: &ContinueCmd,
+        func: continue_cmd,
         goto_next_cmd: true,
     },
     Cmd {
         command: "continue",
-        func: &ContinueCmd,
+        func: continue_cmd,
         goto_next_cmd: true,
     },
     Cmd {
         command: "b",
-        func: &BreakCmd,
+        func: break_cmd,
         goto_next_cmd: false,
     },
     Cmd {
         command: "break",
-        func: &BreakCmd,
+        func: break_cmd,
         goto_next_cmd: false,
     },
     Cmd {
         command: "r",
-        func: &RegistersCmd,
+        func: registers_cmd,
         goto_next_cmd: false,
     },
     Cmd {
         command: "registers",
-        func: &RegistersCmd,
+        func: registers_cmd,
         goto_next_cmd: false,
     },
 ];
@@ -239,13 +217,11 @@ impl Debugger {
             io::stdin()
                 .read_line(&mut input)
                 .expect("Could not read line");
-            if input.len() == 0 {
+            if input == "\n" {
                 if self.last_cmd.goto_next_cmd {
                     exit_loop = true;
                 }
-                self.last_cmd
-                    .func
-                    .execute_cmd(self, cpu, &mut std::iter::empty());
+                (self.last_cmd.func)(self, cpu, &mut std::iter::empty());
             }
             let mut cmd_iter = input.split_whitespace();
             match self.parse_input(cmd_iter.clone()) {
@@ -254,7 +230,7 @@ impl Debugger {
                         exit_loop = true;
                     }
                     cmd_iter.next().unwrap(); // skip initial command
-                    cmd.func.execute_cmd(self, cpu, &mut cmd_iter);
+                    (cmd.func)(self, cpu, &mut cmd_iter);
                     self.last_cmd = cmd;
                 }
                 None => println!("Could not parse command"),

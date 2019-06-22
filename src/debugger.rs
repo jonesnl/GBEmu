@@ -6,7 +6,6 @@ use std::io::{self, prelude::*};
 use itertools::Itertools;
 
 use crate::cpu::Cpu;
-use crate::emu_log;
 use crate::hw::memory::{Bus, BusWidth};
 
 use self::error::{DebugError, DebugResult};
@@ -19,17 +18,9 @@ enum DebuggerState {
 
 fn next_cmd(
     _dbgr: &mut Debugger,
-    cpu: &mut Cpu,
+    _cpu: &mut Cpu,
     _arg_iterator: &mut Iterator<Item = &str>,
 ) -> DebugResult<()> {
-    emu_log!("{:04x?}", cpu.regs);
-    emu_log!(
-        "Flags: z: {}, c: {}, h: {}, n: {}",
-        cpu.regs.get_flag_z(),
-        cpu.regs.get_flag_c(),
-        cpu.regs.get_flag_h(),
-        cpu.regs.get_flag_n()
-    );
     Ok(())
 }
 
@@ -38,14 +29,7 @@ fn registers_cmd(
     cpu: &mut Cpu,
     _: &mut Iterator<Item = &str>,
 ) -> DebugResult<()> {
-    println!("{:04x?}", cpu.regs);
-    println!(
-        "Flags: z: {}, c: {}, h: {}, n: {}",
-        cpu.regs.get_flag_z(),
-        cpu.regs.get_flag_c(),
-        cpu.regs.get_flag_h(),
-        cpu.regs.get_flag_n()
-    );
+    println!("{}", cpu.get_debug_str());
     Ok(())
 }
 
@@ -212,6 +196,7 @@ impl Debugger {
         let mut input = String::new();
         let mut exit_loop = false;
         while !exit_loop {
+            println!("{}", cpu.get_debug_str());
             print!("gbdb=> ");
             io::stdout().flush().expect("Could not flush stdout");
             io::stdin()

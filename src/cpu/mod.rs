@@ -117,13 +117,65 @@ impl Cpu {
         // Look up instruction in instruction table
         // Execute instruction
         let opcode = self.get_opcode();
-        emu_log!("PC: {:02x}, Instr: {:02x}", self.regs.get_pc(), opcode);
         let result = (INSTR[opcode as usize].func)(self);
         // wait
         self.incr_pc();
         self.poll_interrupts();
         self.check_and_run_interrupts();
         result
+    }
+
+    pub fn get_debug_str(&self) -> String {
+        use std::fmt::Write;
+        let mut s = String::new();
+        writeln!(
+            s,
+            "A: {:02X}  F: {:02X}  (AF: {:04X})",
+            self.regs.get_a(),
+            self.regs.get_f(),
+            self.regs.get_af()
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "B: {:02X}  C: {:02X}  (BC: {:04X})",
+            self.regs.get_b(),
+            self.regs.get_c(),
+            self.regs.get_bc()
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "D: {:02X}  E: {:02X}  (DE: {:04X})",
+            self.regs.get_d(),
+            self.regs.get_e(),
+            self.regs.get_de()
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "H: {:02X}  L: {:02X}  (HL: {:04X})",
+            self.regs.get_h(),
+            self.regs.get_l(),
+            self.regs.get_hl()
+        )
+        .unwrap();
+        writeln!(
+            s,
+            "PC: {:04X}  SP: {:04X}",
+            self.regs.get_pc(),
+            self.regs.get_sp()
+        )
+        .unwrap();
+        writeln!(s, "ROM: ??  RAM: ??").unwrap();
+
+        write!(s, "F: [").unwrap();
+        write!(s, "{}", if self.regs.get_flag_z() { "Z" } else { "-" }).unwrap();
+        write!(s, "{}", if self.regs.get_flag_n() { "N" } else { "-" }).unwrap();
+        write!(s, "{}", if self.regs.get_flag_h() { "H" } else { "-" }).unwrap();
+        write!(s, "{}", if self.regs.get_flag_c() { "C" } else { "-" }).unwrap();
+        writeln!(s, "]").unwrap();
+        s
     }
 }
 
@@ -993,8 +1045,7 @@ pub fn jp_imm16_instr(cpu: &mut Cpu) -> InstructionRetType {
 }
 
 pub fn jp_hl_instr(cpu: &mut Cpu) -> InstructionRetType {
-    let addr = cpu.regs.get_hl();
-    let jump_addr = cpu.read16(addr);
+    let jump_addr = cpu.regs.get_hl();
 
     cpu.jump(jump_addr);
     Ok(BranchNotTaken)
@@ -1002,7 +1053,6 @@ pub fn jp_hl_instr(cpu: &mut Cpu) -> InstructionRetType {
 
 pub fn restart_instr(cpu: &mut Cpu) -> InstructionRetType {
     let opcode = cpu.get_opcode();
-
     let restart_addr = match opcode {
         0xc7 => 0x00,
         0xcf => 0x08,
@@ -1014,6 +1064,9 @@ pub fn restart_instr(cpu: &mut Cpu) -> InstructionRetType {
         0xff => 0x38,
         ____ => panic!("Unrecognized rst opcode {}", opcode),
     } as u16;
+
+    let pc = cpu.regs.get_pc();
+    cpu.push_u16(pc.wrapping_add(1));
 
     cpu.jump(restart_addr);
     Ok(NoBranch)

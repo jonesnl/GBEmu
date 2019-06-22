@@ -75,7 +75,7 @@ impl Bus for Memory {
                 self.io.write8(addr, data);
             }
             0xFEA0..=0xFEFF => {
-                println!("Unusable memory address {:04x}", addr);
+                //println!("Unusable memory address {:04x}", addr);
             }
             0xFF00..=0xFF7F => {
                 self.io.write8(addr, data);

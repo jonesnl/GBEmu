@@ -200,9 +200,9 @@ impl LCD {
             };
             let pixel = self.get_bg_pixel(bg_point);
             let rgb = RGBA8 {
-                r: pixel * 100,
-                g: pixel * 100,
-                b: pixel * 100,
+                r: pixel * 75,
+                g: pixel * 75,
+                b: pixel * 75,
                 a: 255,
             };
             let lcd_point = Point { x, y: curline };

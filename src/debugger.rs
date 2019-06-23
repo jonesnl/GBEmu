@@ -6,6 +6,7 @@ use std::io::{self, prelude::*};
 use itertools::Itertools;
 
 use crate::cpu::Cpu;
+use crate::emu_log;
 use crate::hw::memory::{Bus, BusWidth};
 
 use self::error::{DebugError, DebugResult};
@@ -189,6 +190,7 @@ impl Debugger {
             if self.breakpoints.contains(&cpu.regs.get_pc()) {
                 self.state = DebuggerState::Paused;
             } else {
+                emu_log!("{}", cpu.get_debug_str());
                 return;
             }
         }

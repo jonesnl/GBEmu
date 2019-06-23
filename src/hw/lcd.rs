@@ -1,3 +1,4 @@
+use crate::emu_log;
 use crate::hw::memory::{Bus, BusWidth};
 use rgb::RGBA8;
 
@@ -146,6 +147,15 @@ impl LCD {
         self.lcd_display[y * 160 + x] = rgb;
     }
 
+    fn pixel_from_tile(&self, tile_base_addr: u16, (x, y): (u16, u16)) -> u8 {
+        let addr = tile_base_addr + (y as BusWidth / 8 * 2);
+        let upper_byte = self.read8(addr);
+        let lower_byte = self.read8(addr + 1);
+        let upper_result = (upper_byte >> (7 - x)) & 1;
+        let lower_result = (lower_byte >> (7 - x)) & 1;
+        (upper_result << 1) | (lower_result)
+    }
+
     fn get_bg_pixel(&self, bg_map: Point) -> u8 {
         let bg_tt_addr = self.background_tile_table_base_addr();
         let tpt_addr = self.tile_pattern_table_base_addr();
@@ -154,29 +164,20 @@ impl LCD {
         let tile_row = (bg_map.y / 8) as u16;
         let pixel_row = (bg_map.y % 8) as u16;
 
-        let pixel_from_tile = |tile_base_addr, (x, y)| -> u8 {
-            let addr = tile_base_addr + (y as BusWidth / 8 * 2);
-            let upper_byte = self.read8(addr);
-            let lower_byte = self.read8(addr + 1);
-            let upper_result = (upper_byte >> (7 - x)) & 1;
-            let lower_result = (lower_byte >> (7 - x)) & 1;
-            (upper_result << 1) | (lower_result)
-        };
-
         match tpt_addr {
             0x8000 => {
                 let tt_addr = bg_tt_addr + tile_row * 32 + tile_col;
                 let tt_entry = self.read8(tt_addr) as i32;
                 let tile_base_addr = tpt_addr as i32 + tt_entry as i32 * 16;
                 let tile_base_addr = tile_base_addr as u16;
-                pixel_from_tile(tile_base_addr, (pixel_col, pixel_row))
+                self.pixel_from_tile(tile_base_addr, (pixel_col, pixel_row))
             }
             0x9000 => {
                 let tt_addr = bg_tt_addr + tile_row * 32 + tile_col;
                 let tt_entry = self.read8(tt_addr) as i8;
                 let tile_base_addr = (tpt_addr as i32) + (tt_entry as i32) * 16;
                 let tile_base_addr = tile_base_addr as u16;
-                pixel_from_tile(tile_base_addr, (pixel_col, pixel_row))
+                self.pixel_from_tile(tile_base_addr, (pixel_col, pixel_row))
             }
             _ => panic!("tile_pattern_table {}", tpt_addr),
         }
@@ -348,4 +349,39 @@ impl LCD {
     pub fn wndposx(&self) -> u8 {
         self.lcdram[0xB]
     }
+}
+
+#[test]
+fn basic_lcd() {
+    let mut lcd = LCD::new();
+    for p in 0..16 {
+        lcd.write8(0x8000 + p, 0xFF); // First tile all dark
+        lcd.write8(0x8010 + p, 0x00); // second tile all white
+        lcd.write8(0x8020 + p, 0xFF); // third tile all dark
+    }
+
+    lcd.write8(0x9800, 0);
+    lcd.write8(0x9801, 1);
+    lcd.write8(0x9802, 2);
+    lcd.write8(0x9820, 1);
+    lcd.write8(0x9822, 1);
+
+    lcd.write8(0xFF40, 0b0001_0000); // set map
+    lcd.write8(0xFF47, 0b00011011); // set palate colors
+
+    assert_eq!(lcd.pixel_from_tile(0x8000, (0, 0)), 3);
+    assert_eq!(lcd.pixel_from_tile(0x8000, (7, 7)), 3);
+
+    assert_eq!(lcd.pixel_from_tile(0x8010, (0, 0)), 0);
+    assert_eq!(lcd.pixel_from_tile(0x8010, (7, 7)), 0);
+
+    assert_eq!(lcd.pixel_from_tile(0x8020, (7, 7)), 3);
+    assert_eq!(lcd.pixel_from_tile(0x8020, (7, 7)), 3);
+
+    assert_eq!(lcd.get_bg_pixel(Point { x: 0, y: 0 }), 3);
+    assert_eq!(lcd.get_bg_pixel(Point { x: 7, y: 7 }), 3);
+    assert_eq!(lcd.get_bg_pixel(Point { x: 8, y: 7 }), 0);
+    assert_eq!(lcd.get_bg_pixel(Point { x: 7, y: 8 }), 0);
+    assert_eq!(lcd.get_bg_pixel(Point { x: 16, y: 8 }), 0);
+    assert_eq!(lcd.get_bg_pixel(Point { x: 16, y: 7 }), 3);
 }
